@@ -24,6 +24,7 @@
   "license": "ISC",
   "description": "Paginating data with NestJS and TypeORM",
   "dependencies": {
+    "@faker-js/faker": "^8.4.1",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
