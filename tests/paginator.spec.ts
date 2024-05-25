@@ -129,4 +129,16 @@ describe('Paginator Tests', () => {
     );
     expect(result.nextPage).toEqual(`http://mock-endpoint.com/data?page=19`);
   });
+
+  it('Should catch error when paginating data', async () => {
+    const { repository, sut } = makeSut(100);
+
+    jest.spyOn(repository, 'findAndCount').mockImplementationOnce(() => {
+      throw new Error('Mock Error');
+    });
+
+    const result = sut.paginate(repository, { limit: 1, page: 5 });
+
+    await expect(result).rejects.toThrow('Mock Error');
+  });
 });
