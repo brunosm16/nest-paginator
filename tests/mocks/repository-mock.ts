@@ -1,7 +1,8 @@
 import type { EntityManager, EntityTarget, FindManyOptions } from 'typeorm';
 
-import { DEFAULT_MOCK_LIMIT } from 'tests/constants';
 import { Repository } from 'typeorm';
+
+import { DEFAULT_MOCK_LIMIT } from '../constants';
 
 export class RepositoryMock<T> extends Repository<T> {
   private readonly mockItems: T[] = [];
@@ -24,6 +25,6 @@ export class RepositoryMock<T> extends Repository<T> {
   ): Promise<[T[], number]> {
     const limit = findOptions?.take ?? DEFAULT_MOCK_LIMIT;
     const result = this.mockItems.slice(0, limit);
-    return [result, result.length];
+    return [result, this.mockItems.length];
   }
 }

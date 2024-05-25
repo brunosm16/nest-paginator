@@ -1,9 +1,8 @@
 import type { EntityManager, EntityTarget } from 'typeorm';
 
-import { DEFAULT_MOCK_DATA_AMOUNT } from 'tests/constants';
-
 import type { MockEntity } from '../mocks';
 
+import { DEFAULT_MOCK_DATA_AMOUNT } from '../constants';
 import { RepositoryMock, generateMockItems } from '../mocks';
 
 export const repositoryMockFactory = (

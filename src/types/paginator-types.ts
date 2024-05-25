@@ -1,8 +1,26 @@
-export type PaginatorProperties<T> = {
+export type PaginatorResult<T> = {
   data: T[];
   dataCount: number;
-  next: string;
+  nextPage: string;
   pageDataCount: number;
-  previous: string;
+  previousPage: string;
+  totalData: number;
+};
+
+export type PaginatorRoutes = {
+  nextPage: string;
+  previousPage: string;
+};
+
+export type PaginatorProperties = {
+  limit: number;
+  page: number;
+  route?: string;
+};
+
+export type PaginatorRepositoryData<T> = {
+  data: T[];
+  dataCount: number;
+  pageDataCount: number;
   totalData: number;
 };
