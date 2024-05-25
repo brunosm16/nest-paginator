@@ -3,11 +3,7 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
   clearMocks: true,
   coverageDirectory: 'coverage',
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
-  },
+  collectCoverageFrom: ['<rootDir>/src/**/*.ts', '<rootDir>/src/*.ts'],
   preset: 'ts-jest',
   moduleNameMapper: {
     '@/(.*)': '<rootDir>/src/$1',
