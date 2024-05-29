@@ -141,4 +141,72 @@ describe('Paginator Tests', () => {
 
     await expect(result).rejects.toThrow('Mock Error');
   });
+
+  it('Should resolve page to zero when its first page', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
+
+    await sut.paginate(repository, {
+      limit: 6,
+      page: 1,
+    });
+
+    expect(findAndCountSpy).toHaveBeenCalledWith({
+      skip: 0,
+      take: 6,
+    });
+  });
+
+  it('Should resolve page when page its greater than 1', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
+
+    const properties = {
+      limit: 6,
+      page: 5,
+    };
+
+    await sut.paginate(repository, properties);
+
+    const expectedSkip = (properties.page - 1) * 6;
+
+    expect(findAndCountSpy).toHaveBeenCalledWith({
+      skip: expectedSkip,
+      take: 6,
+    });
+  });
+
+  it('Should resolve page to zero when a negative page is provided', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
+
+    await sut.paginate(repository, {
+      limit: 6,
+      page: -1,
+    });
+
+    expect(findAndCountSpy).toHaveBeenCalledWith({
+      skip: 0,
+      take: 6,
+    });
+  });
+
+  it('Should resolve page to zero when a zero page is provided', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
+
+    await sut.paginate(repository, {
+      limit: 6,
+      page: 0,
+    });
+
+    expect(findAndCountSpy).toHaveBeenCalledWith({
+      skip: 0,
+      take: 6,
+    });
+  });
 });
