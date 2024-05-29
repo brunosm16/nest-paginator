@@ -90,8 +90,12 @@ describe('Paginator Tests', () => {
     expect(result.dataCount).toEqual(6);
     expect(result.pageDataCount).toEqual(17);
     expect(result.totalData).toEqual(100);
-    expect(result.previousPage).toEqual('http://mock-endpoint.com/data?page=4');
-    expect(result.nextPage).toEqual('http://mock-endpoint.com/data?page=6');
+    expect(result.routes.previousPage).toEqual(
+      'http://mock-endpoint.com/data?page=4'
+    );
+    expect(result.routes.nextPage).toEqual(
+      'http://mock-endpoint.com/data?page=6'
+    );
   });
 
   it('Should not return previous for first page', async () => {
@@ -107,8 +111,10 @@ describe('Paginator Tests', () => {
     expect(result.dataCount).toEqual(6);
     expect(result.pageDataCount).toEqual(17);
     expect(result.totalData).toEqual(100);
-    expect(result.previousPage).toEqual('http://mock-endpoint.com/data?page=1');
-    expect(result.nextPage).toEqual(`http://mock-endpoint.com/data?page=2`);
+    expect(result.routes.previousPage).toEqual(null);
+    expect(result.routes.nextPage).toEqual(
+      `http://mock-endpoint.com/data?page=2`
+    );
   });
 
   it('Should not set nextPage when it reaches data set limit', async () => {
@@ -116,7 +122,7 @@ describe('Paginator Tests', () => {
 
     const result = await sut.paginate(repository, {
       limit: 6,
-      page: 19,
+      page: 17,
       route: 'http://mock-endpoint.com/data',
     });
 
@@ -124,10 +130,10 @@ describe('Paginator Tests', () => {
     expect(result.dataCount).toEqual(6);
     expect(result.pageDataCount).toEqual(17);
     expect(result.totalData).toEqual(100);
-    expect(result.previousPage).toEqual(
-      'http://mock-endpoint.com/data?page=18'
+    expect(result.routes.previousPage).toEqual(
+      'http://mock-endpoint.com/data?page=16'
     );
-    expect(result.nextPage).toEqual(`http://mock-endpoint.com/data?page=19`);
+    expect(result.routes.nextPage).toEqual(null);
   });
 
   it('Should catch error when paginating data', async () => {
@@ -208,5 +214,21 @@ describe('Paginator Tests', () => {
       skip: 0,
       take: 6,
     });
+  });
+
+  it('Should not set nextPage and previousPage when route is not provided', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const result = await sut.paginate(repository, {
+      limit: 6,
+      page: 5,
+    });
+
+    expect(result.data.length).toEqual(6);
+    expect(result.dataCount).toEqual(6);
+    expect(result.pageDataCount).toEqual(17);
+    expect(result.totalData).toEqual(100);
+    expect(result.routes.nextPage).toEqual(null);
+    expect(result.routes.previousPage).toEqual(null);
   });
 });
