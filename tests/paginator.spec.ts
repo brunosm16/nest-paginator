@@ -231,4 +231,42 @@ describe('Paginator Tests', () => {
     expect(result.routes.nextPage).toEqual(null);
     expect(result.routes.previousPage).toEqual(null);
   });
+
+  it('Should resolve page to 1 when zero page is provided', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const result = await sut.paginate(repository, {
+      limit: 6,
+      page: 0,
+      route: 'http://mock-endpoint.com/data',
+    });
+
+    expect(result.data.length).toEqual(6);
+    expect(result.dataCount).toEqual(6);
+    expect(result.pageDataCount).toEqual(17);
+    expect(result.totalData).toEqual(100);
+    expect(result.routes.nextPage).toEqual(
+      'http://mock-endpoint.com/data?page=2'
+    );
+    expect(result.routes.previousPage).toEqual(null);
+  });
+
+  it('Should resolve page to 1 when negative page is provided', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const result = await sut.paginate(repository, {
+      limit: 6,
+      page: -1,
+      route: 'http://mock-endpoint.com/data',
+    });
+
+    expect(result.data.length).toEqual(6);
+    expect(result.dataCount).toEqual(6);
+    expect(result.pageDataCount).toEqual(17);
+    expect(result.totalData).toEqual(100);
+    expect(result.routes.nextPage).toEqual(
+      'http://mock-endpoint.com/data?page=2'
+    );
+    expect(result.routes.previousPage).toEqual(null);
+  });
 });
