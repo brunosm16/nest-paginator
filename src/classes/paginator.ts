@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-useless-constructor */
 
-import type { Repository } from 'typeorm';
+import type { FindManyOptions, Repository } from 'typeorm';
 
 import type {
   PaginatorProperties,
@@ -32,12 +32,10 @@ export class Paginator<T> extends PaginatorBase<T> {
 
   private async fetchRepositoryData(
     repository: Repository<T>,
-    properties: PaginatorProperties
+    properties: PaginatorProperties<T>
   ): Promise<PaginatorRepositoryData<T>> {
-    const [items, total] = await repository.findAndCount({
-      skip: properties.page,
-      take: properties.limit,
-    });
+    const findOptions = this.resolveFindOptions(properties);
+    const [items, total] = await repository.findAndCount(findOptions);
 
     const pageDataCount = Math.ceil(total / properties.limit);
 
@@ -50,7 +48,7 @@ export class Paginator<T> extends PaginatorBase<T> {
   }
 
   private getNextPage(
-    paginatorProperties: PaginatorProperties,
+    paginatorProperties: PaginatorProperties<T>,
     lastPage: number
   ): string {
     const { page, route } = paginatorProperties;
@@ -64,7 +62,7 @@ export class Paginator<T> extends PaginatorBase<T> {
     return this.concatenateRoute(route, resultPage);
   }
 
-  private getPreviousPage(paginatorProperties: PaginatorProperties): string {
+  private getPreviousPage(paginatorProperties: PaginatorProperties<T>): string {
     const { page, route } = paginatorProperties;
 
     let previous = page - 1;
@@ -77,7 +75,7 @@ export class Paginator<T> extends PaginatorBase<T> {
   }
 
   private getRoutes(
-    paginatorProperties: PaginatorProperties,
+    paginatorProperties: PaginatorProperties<T>,
     lastPage: number
   ): PaginatorRoutes {
     return {
@@ -86,9 +84,32 @@ export class Paginator<T> extends PaginatorBase<T> {
     };
   }
 
+  private resolveFindOptions(
+    properties: PaginatorProperties<T>
+  ): FindManyOptions<T> {
+    const { limit, page, queryOptions = {} } = properties;
+    const resolvedPage = this.resolvePage(page);
+
+    const skip = resolvedPage * limit;
+
+    return {
+      skip,
+      take: limit,
+      ...queryOptions,
+    };
+  }
+
+  private resolvePage(page: number): number {
+    if (page <= 0) {
+      return 0;
+    }
+
+    return page - 1;
+  }
+
   public async paginate(
     repository: Repository<T>,
-    properties: PaginatorProperties
+    properties: PaginatorProperties<T>
   ): Promise<PaginatorResult<T>> {
     try {
       const repositoryData = await this.fetchRepositoryData(

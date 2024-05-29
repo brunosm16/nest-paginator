@@ -1,3 +1,5 @@
+import type { FindManyOptions } from 'typeorm';
+
 export type PaginatorResult<T> = {
   data: T[];
   dataCount: number;
@@ -12,9 +14,10 @@ export type PaginatorRoutes = {
   previousPage: string;
 };
 
-export type PaginatorProperties = {
+export type PaginatorProperties<T> = {
   limit: number;
   page: number;
+  queryOptions?: FindManyOptions<T>;
   route?: string;
 };
 

@@ -5,6 +5,6 @@ import type { PaginatorProperties, PaginatorResult } from '../types';
 export abstract class PaginatorBase<T> {
   public abstract paginate(
     repository: Repository<T>,
-    properties: PaginatorProperties
+    properties: PaginatorProperties<T>
   ): Promise<PaginatorResult<T>>;
 }
