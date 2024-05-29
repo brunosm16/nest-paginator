@@ -1,6 +1,17 @@
 {
   "name": "nest-paginator",
-  "version": "0.0.1",
+  "version": "0.0.7",
+  "author": "Bruno Moraes <brunoskr23@gmail.com>",
+  "license": "ISC",
+  "description": "Paginating data with NestJS and TypeORM",
+  "main": "./dist/main.js",
+  "module": "./dist/main.mjs",
+  "types": "./dist/main.d.ts",
+  "files": [
+    "dist",
+    "readme.md",
+    "license"
+  ],
   "scripts": {
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,tests}/**/*.ts\" --fix",
@@ -8,7 +19,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsup",
     "prepare": "husky",
     "export-vars": "export $(grep -v '^#' .env | xargs -0) && echo 'Environment variables are set'"
   },
@@ -19,9 +30,6 @@
     "reusable library",
     "oss"
   ],
-  "author": "Bruno Moraes <brunoskr23@gmail.com>",
-  "license": "ISC",
-  "description": "Paginating data with NestJS and TypeORM",
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
     "typeorm": "^0.3.20"
@@ -60,6 +68,7 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.0.2",
     "typescript": "^5.1.3"
   }
 }
