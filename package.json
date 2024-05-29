@@ -1,14 +1,14 @@
 {
   "name": "nest-paginator",
   "version": "0.0.1",
-  "main": "src/main.ts",
   "scripts": {
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "eslint \"{src,apps,libs,tests}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "build": "tsc -p tsconfig.build.json",
     "prepare": "husky",
     "export-vars": "export $(grep -v '^#' .env | xargs -0) && echo 'Environment variables are set'"
   },
