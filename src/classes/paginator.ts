@@ -26,7 +26,7 @@ export class Paginator<T> extends PaginatorBase<T> {
   ): PaginatorResult<T> {
     return {
       ...repositoryData,
-      ...routes,
+      routes,
     };
   }
 
@@ -48,27 +48,32 @@ export class Paginator<T> extends PaginatorBase<T> {
   }
 
   private getNextPage(
-    paginatorProperties: PaginatorProperties<T>,
+    page: number,
+    route: string,
     lastPage: number
-  ): string {
-    const { page, route } = paginatorProperties;
+  ): null | string {
+    let next = page;
 
-    let resultPage = page;
-
-    if (page <= lastPage) {
-      resultPage += 1;
+    if (page >= lastPage) {
+      return null;
     }
 
-    return this.concatenateRoute(route, resultPage);
+    if (page < lastPage) {
+      next += 1;
+    }
+
+    return this.concatenateRoute(route, next);
   }
 
-  private getPreviousPage(paginatorProperties: PaginatorProperties<T>): string {
-    const { page, route } = paginatorProperties;
+  private getPreviousPage(page: number, route: string): string {
+    let previous = page;
 
-    let previous = page - 1;
+    if (previous <= 1) {
+      return null;
+    }
 
-    if (previous < 1) {
-      previous = 1;
+    if (previous > 1) {
+      previous -= 1;
     }
 
     return this.concatenateRoute(route, previous);
@@ -78,9 +83,20 @@ export class Paginator<T> extends PaginatorBase<T> {
     paginatorProperties: PaginatorProperties<T>,
     lastPage: number
   ): PaginatorRoutes {
+    const { page, route } = paginatorProperties;
+
+    if (!route) {
+      return {
+        nextPage: null,
+        previousPage: null,
+      };
+    }
+
+    const resolvedRoutePage = this.resolveRoutePage(page);
+
     return {
-      nextPage: this.getNextPage(paginatorProperties, lastPage),
-      previousPage: this.getPreviousPage(paginatorProperties),
+      nextPage: this.getNextPage(resolvedRoutePage, route, lastPage),
+      previousPage: this.getPreviousPage(resolvedRoutePage, route),
     };
   }
 
@@ -105,6 +121,14 @@ export class Paginator<T> extends PaginatorBase<T> {
     }
 
     return page - 1;
+  }
+
+  private resolveRoutePage(page: number): number {
+    if (page <= 0) {
+      return 1;
+    }
+
+    return page;
   }
 
   public async paginate(

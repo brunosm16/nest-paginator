@@ -3,15 +3,14 @@ import type { FindManyOptions } from 'typeorm';
 export type PaginatorResult<T> = {
   data: T[];
   dataCount: number;
-  nextPage: string;
   pageDataCount: number;
-  previousPage: string;
+  routes: PaginatorRoutes;
   totalData: number;
 };
 
 export type PaginatorRoutes = {
-  nextPage: string;
-  previousPage: string;
+  nextPage: null | string;
+  previousPage: null | string;
 };
 
 export type PaginatorProperties<T> = {
