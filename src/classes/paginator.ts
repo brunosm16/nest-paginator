@@ -3,10 +3,10 @@
 import type { FindManyOptions, Repository } from 'typeorm';
 
 import type {
-  PaginatorProperties,
+  PaginatorPages,
+  PaginatorQuery,
   PaginatorRepositoryData,
   PaginatorResult,
-  PaginatorRoutes,
 } from '../types';
 
 import { PaginatorBase } from './paginator-base';
@@ -16,42 +16,7 @@ export class Paginator<T> extends PaginatorBase<T> {
     super();
   }
 
-  private concatenateRoute(route: string, page: number): string {
-    return `${route}?page=${page}`;
-  }
-
-  private createPaginatorResult(
-    repositoryData: PaginatorRepositoryData<T>,
-    routes: PaginatorRoutes
-  ): PaginatorResult<T> {
-    return {
-      ...repositoryData,
-      routes,
-    };
-  }
-
-  private async fetchRepositoryData(
-    repository: Repository<T>,
-    properties: PaginatorProperties<T>
-  ): Promise<PaginatorRepositoryData<T>> {
-    const findOptions = this.resolveFindOptions(properties);
-    const [items, total] = await repository.findAndCount(findOptions);
-
-    const pageDataCount = Math.ceil(total / properties.limit);
-
-    return {
-      data: items,
-      dataCount: items.length,
-      pageDataCount,
-      totalData: total,
-    };
-  }
-
-  private getNextPage(
-    page: number,
-    route: string,
-    lastPage: number
-  ): null | string {
+  private getNextPage(page: number, lastPage: number): null | number {
     let next = page;
 
     if (page >= lastPage) {
@@ -62,11 +27,15 @@ export class Paginator<T> extends PaginatorBase<T> {
       next += 1;
     }
 
-    return this.concatenateRoute(route, next);
+    return next;
   }
 
-  private getPreviousPage(page: number, route: string): string {
+  private getPreviousPage(page: number, lastPage: number): null | number {
     let previous = page;
+
+    if (previous > lastPage) {
+      return null;
+    }
 
     if (previous <= 1) {
       return null;
@@ -76,46 +45,44 @@ export class Paginator<T> extends PaginatorBase<T> {
       previous -= 1;
     }
 
-    return this.concatenateRoute(route, previous);
+    return previous;
   }
 
-  private getRoutes(
-    paginatorProperties: PaginatorProperties<T>,
-    lastPage: number
-  ): PaginatorRoutes {
-    const { page, route } = paginatorProperties;
+  private async getRepositoryData(
+    repository: Repository<T>,
+    query: PaginatorQuery<T>
+  ): Promise<PaginatorRepositoryData<T>> {
+    const findOptions = this.resolveFindOptions(query);
+    const [items, total] = await repository.findAndCount(findOptions);
 
-    if (!route) {
-      return {
-        nextPage: null,
-        previousPage: null,
-      };
-    }
+    const { limit } = query;
 
-    const resolvedRoutePage = this.resolveRoutePage(page);
+    const totalPages = Math.ceil(total / limit);
 
     return {
-      nextPage: this.getNextPage(resolvedRoutePage, route, lastPage),
-      previousPage: this.getPreviousPage(resolvedRoutePage, route),
+      result: items,
+      resultLength: items.length,
+      totalDataLength: total,
+      totalPages,
     };
   }
 
   private resolveFindOptions(
-    properties: PaginatorProperties<T>
+    properties: PaginatorQuery<T>
   ): FindManyOptions<T> {
-    const { limit, page, queryOptions = {} } = properties;
-    const resolvedPage = this.resolvePage(page);
+    const { limit, page, query = {} } = properties;
+    const resolvedPage = this.resolvePageToRepository(page);
 
     const skip = resolvedPage * limit;
 
     return {
       skip,
       take: limit,
-      ...queryOptions,
+      ...query,
     };
   }
 
-  private resolvePage(page: number): number {
+  private resolvePageToRepository(page: number): number {
     if (page <= 0) {
       return 0;
     }
@@ -123,7 +90,7 @@ export class Paginator<T> extends PaginatorBase<T> {
     return page - 1;
   }
 
-  private resolveRoutePage(page: number): number {
+  private resolvePageToResult(page: number): number {
     if (page <= 0) {
       return 1;
     }
@@ -131,22 +98,34 @@ export class Paginator<T> extends PaginatorBase<T> {
     return page;
   }
 
+  private resolvePages(
+    query: PaginatorQuery<T>,
+    lastPage: number
+  ): PaginatorPages {
+    const { page } = query;
+
+    const resolvedPage = this.resolvePageToResult(page);
+
+    return {
+      next: this.getNextPage(resolvedPage, lastPage),
+      previous: this.getPreviousPage(resolvedPage, lastPage),
+    };
+  }
+
   public async paginate(
     repository: Repository<T>,
-    properties: PaginatorProperties<T>
+    query: PaginatorQuery<T>
   ): Promise<PaginatorResult<T>> {
     try {
-      const repositoryData = await this.fetchRepositoryData(
-        repository,
-        properties
-      );
+      const repositoryData = await this.getRepositoryData(repository, query);
 
-      const paginatorRoutes = this.getRoutes(
-        properties,
-        repositoryData.pageDataCount
-      );
+      const { totalPages } = repositoryData;
+      const pages = this.resolvePages(query, totalPages);
 
-      return this.createPaginatorResult(repositoryData, paginatorRoutes);
+      return {
+        ...repositoryData,
+        ...pages,
+      };
     } catch (err) {
       console.error(err);
       throw err;

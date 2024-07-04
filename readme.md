@@ -2,7 +2,7 @@
 
 > Paginate data with Nest and TypeORM
 
-This project uses Nest together with TypeORM to paginate data, the idea it's to use this library by only calling a function that it's responsible for paginating data to a TypeORM Entity.
+This project uses Nest with TypeORM to paginate data, the idea it's to use this library by only calling a function that it's responsible for paginating data to a TypeORM Entity.
 
 ## Installation
 
@@ -14,7 +14,7 @@ npm install my-crazy-module --save
 
 ## Usage example
 
-You can found how to use this project by the examples provided at [here](https://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@github.com/brunosm16/nest-paginator-examples)
+You can found how to use this project by the examples provided at [here](https://@github.com/brunosm16/nest-paginator-examples)
 
 ## Tests
 

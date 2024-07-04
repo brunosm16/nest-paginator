@@ -31,109 +31,94 @@ describe('Paginator Tests', () => {
   it('Should paginate to first page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const result = await sut.paginate(repository, {
+    const {
+      next,
+      previous,
+      result,
+      resultLength,
+      totalDataLength,
+      totalPages,
+    } = await sut.paginate(repository, {
       limit: 6,
       page: 1,
     });
 
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
+    expect(next).toEqual(2);
+    expect(previous).toEqual(null);
+    expect(resultLength).toEqual(6);
+    expect(totalDataLength).toEqual(100);
+    expect(totalPages).toEqual(17);
+    expect(result).toEqual(expect.any(Array<MockEntity>));
   });
 
   it('Should paginate to random page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const properties = {
-      limit: 4,
-      page: 1,
-    };
-
-    await sut.paginate(repository, properties);
-
-    const result = await sut.paginate(repository, {
-      ...properties,
-      page: 12,
+    const {
+      next,
+      previous,
+      result,
+      resultLength,
+      totalDataLength,
+      totalPages,
+    } = await sut.paginate(repository, {
+      limit: 6,
+      page: 4,
     });
 
-    expect(result.data.length).toEqual(4);
-    expect(result.dataCount).toEqual(4);
-    expect(result.pageDataCount).toEqual(25);
-    expect(result.totalData).toEqual(100);
+    expect(next).toEqual(5);
+    expect(previous).toEqual(3);
+    expect(resultLength).toEqual(6);
+    expect(totalDataLength).toEqual(100);
+    expect(totalPages).toEqual(17);
+    expect(result).toEqual(expect.any(Array<MockEntity>));
   });
 
   it('Should paginate to last page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const result = await sut.paginate(repository, {
+    const {
+      next,
+      previous,
+      result,
+      resultLength,
+      totalDataLength,
+      totalPages,
+    } = await sut.paginate(repository, {
       limit: 6,
-      page: 16,
+      page: 17,
     });
 
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-  });
-
-  it('Should paginate with route', async () => {
-    const { repository, sut } = makeSut(100);
-
-    const result = await sut.paginate(repository, {
-      limit: 6,
-      page: 5,
-      route: 'http://mock-endpoint.com/data',
-    });
-
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-    expect(result.routes.previousPage).toEqual(
-      'http://mock-endpoint.com/data?page=4'
-    );
-    expect(result.routes.nextPage).toEqual(
-      'http://mock-endpoint.com/data?page=6'
-    );
+    expect(next).toEqual(null);
+    expect(previous).toEqual(16);
+    expect(resultLength).toEqual(6);
+    expect(totalDataLength).toEqual(100);
+    expect(totalPages).toEqual(17);
+    expect(result).toEqual(expect.any(Array<MockEntity>));
   });
 
   it('Should not return previous for first page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const result = await sut.paginate(repository, {
+    const data = await sut.paginate(repository, {
       limit: 6,
       page: 1,
-      route: 'http://mock-endpoint.com/data',
     });
 
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-    expect(result.routes.previousPage).toEqual(null);
-    expect(result.routes.nextPage).toEqual(
-      `http://mock-endpoint.com/data?page=2`
-    );
+    expect(data.previous).toEqual(null);
+    expect(data.next).toEqual(2);
   });
 
-  it('Should not set nextPage when it reaches data set limit', async () => {
+  it('Should not return next when it reaches data set limit', async () => {
     const { repository, sut } = makeSut(100);
 
-    const result = await sut.paginate(repository, {
+    const data = await sut.paginate(repository, {
       limit: 6,
       page: 17,
-      route: 'http://mock-endpoint.com/data',
     });
 
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-    expect(result.routes.previousPage).toEqual(
-      'http://mock-endpoint.com/data?page=16'
-    );
-    expect(result.routes.nextPage).toEqual(null);
+    expect(data.next).toEqual(null);
+    expect(data.previous).toEqual(16);
   });
 
   it('Should catch error when paginating data', async () => {
@@ -143,9 +128,9 @@ describe('Paginator Tests', () => {
       throw new Error('Mock Error');
     });
 
-    const result = sut.paginate(repository, { limit: 1, page: 5 });
+    const data = sut.paginate(repository, { limit: 1, page: 5 });
 
-    await expect(result).rejects.toThrow('Mock Error');
+    await expect(data).rejects.toThrow('Mock Error');
   });
 
   it('Should resolve page to zero when its first page', async () => {
@@ -216,57 +201,54 @@ describe('Paginator Tests', () => {
     });
   });
 
-  it('Should not set nextPage and previousPage when route is not provided', async () => {
-    const { repository, sut } = makeSut(100);
-
-    const result = await sut.paginate(repository, {
-      limit: 6,
-      page: 5,
-    });
-
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-    expect(result.routes.nextPage).toEqual(null);
-    expect(result.routes.previousPage).toEqual(null);
-  });
-
   it('Should resolve page to 1 when zero page is provided', async () => {
     const { repository, sut } = makeSut(100);
 
-    const result = await sut.paginate(repository, {
-      limit: 6,
-      page: 0,
-      route: 'http://mock-endpoint.com/data',
-    });
-
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-    expect(result.routes.nextPage).toEqual(
-      'http://mock-endpoint.com/data?page=2'
+    const { next, previous, result, resultLength } = await sut.paginate(
+      repository,
+      {
+        limit: 6,
+        page: 0,
+      }
     );
-    expect(result.routes.previousPage).toEqual(null);
+
+    expect(next).toEqual(2);
+    expect(previous).toEqual(null);
+    expect(result).toEqual(expect.any(Array<MockEntity>));
+    expect(resultLength).toEqual(6);
   });
 
   it('Should resolve page to 1 when negative page is provided', async () => {
     const { repository, sut } = makeSut(100);
 
-    const result = await sut.paginate(repository, {
-      limit: 6,
-      page: -1,
-      route: 'http://mock-endpoint.com/data',
-    });
-
-    expect(result.data.length).toEqual(6);
-    expect(result.dataCount).toEqual(6);
-    expect(result.pageDataCount).toEqual(17);
-    expect(result.totalData).toEqual(100);
-    expect(result.routes.nextPage).toEqual(
-      'http://mock-endpoint.com/data?page=2'
+    const { next, previous, result, resultLength } = await sut.paginate(
+      repository,
+      {
+        limit: 6,
+        page: -1,
+      }
     );
-    expect(result.routes.previousPage).toEqual(null);
+
+    expect(next).toEqual(2);
+    expect(previous).toEqual(null);
+    expect(result).toEqual(expect.any(Array<MockEntity>));
+    expect(resultLength).toEqual(6);
+  });
+
+  it("Should resolve pages when it's beyond the last page", async () => {
+    const { repository, sut } = makeSut(100);
+
+    const { next, previous, result, resultLength } = await sut.paginate(
+      repository,
+      {
+        limit: 6,
+        page: 50,
+      }
+    );
+
+    expect(next).toEqual(null);
+    expect(previous).toEqual(null);
+    expect(result).toEqual(expect.any(Array<MockEntity>));
+    expect(resultLength).toEqual(6);
   });
 });
