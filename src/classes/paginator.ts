@@ -2,6 +2,9 @@
 
 import type { FindManyOptions, Repository } from 'typeorm';
 
+import { PaginatorOptionsSchema } from '@/schemas/options-schema';
+import { zodValidate } from '@/validation/zod-validate';
+
 import type {
   PaginatorOptions,
   PaginatorResponse,
@@ -107,6 +110,8 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     options: PaginatorOptions<T>
   ): Promise<PaginatorResponse<T>> {
     try {
+      zodValidate(PaginatorOptionsSchema, options);
+
       const [data, total] = await this.fetchRepository(repository, options);
 
       const responseInformation = this.resolveResponseInformation(
