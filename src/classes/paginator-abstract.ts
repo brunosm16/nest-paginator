@@ -1,10 +1,10 @@
 import type { Repository } from 'typeorm';
 
-import type { PaginatorOptions, PaginatorResult } from '../types';
+import type { PaginatorOptions, PaginatorResponse } from '../types';
 
 export abstract class PaginatorAbstract<T> {
   public abstract paginate(
     repository: Repository<T>,
     options: PaginatorOptions<T>
-  ): Promise<PaginatorResult<T>>;
+  ): Promise<PaginatorResponse<T>>;
 }

@@ -4,9 +4,8 @@ import type { FindManyOptions, Repository } from 'typeorm';
 
 import type {
   PaginatorOptions,
-  PaginatorPages,
-  PaginatorRepositoryData,
-  PaginatorResult,
+  PaginatorResponse,
+  PaginatorResponseInformation,
 } from '../types';
 
 import { PaginatorAbstract } from './paginator-abstract';
@@ -14,6 +13,14 @@ import { PaginatorAbstract } from './paginator-abstract';
 export class Paginator<T> extends PaginatorAbstract<T> {
   constructor() {
     super();
+  }
+
+  private async fetchRepository(
+    repository: Repository<T>,
+    options: PaginatorOptions<T>
+  ) {
+    const findOptions = this.resolveFindOptions(options);
+    return repository.findAndCount(findOptions);
   }
 
   private getNextPage(page: number, limitPage: number): null | number {
@@ -32,30 +39,25 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     return page - 1;
   }
 
-  private async getRepositoryData(
-    repository: Repository<T>,
-    options: PaginatorOptions<T>
-  ): Promise<PaginatorRepositoryData<T>> {
-    const findOptions = this.resolveFindOptions(options);
-    const [items, total] = await repository.findAndCount(findOptions);
-
-    const { limit } = options;
-
-    const totalPages = Math.ceil(total / limit);
-
+  private makeEmptyResponseInformation(
+    limit: number
+  ): PaginatorResponseInformation {
     return {
-      result: items,
-      resultLength: items.length,
-      totalDataLength: total,
-      totalPages,
+      limitRows: limit,
+      pages: {
+        currentPage: null,
+        lastPage: null,
+        nextPage: null,
+        previousPage: null,
+      },
+      totalRows: 0,
     };
   }
 
   private resolveFindOptions(options: PaginatorOptions<T>): FindManyOptions<T> {
     const { limit, page, query = {} } = options;
-    const resolvedPage = this.resolvePageToRepository(page);
 
-    const skip = resolvedPage * limit;
+    const skip = (page - 1) * limit;
 
     return {
       skip,
@@ -64,49 +66,57 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     };
   }
 
-  private resolvePageToRepository(page: number): number {
-    if (page <= 0) {
-      return 0;
-    }
-
-    return page - 1;
-  }
-
-  private resolvePageToResult(page: number): number {
-    if (page <= 0) {
-      return 1;
-    }
-
-    return page;
-  }
-
-  private resolvePages(
-    query: PaginatorOptions<T>,
-    lastPage: number
-  ): PaginatorPages {
-    const { page } = query;
-
-    const resolvedPage = this.resolvePageToResult(page);
+  private resolvePages(page: number, lastPage: number) {
+    const nextPage = this.getNextPage(page, lastPage);
+    const previousPage = this.getPreviousPage(page, lastPage);
 
     return {
-      next: this.getNextPage(resolvedPage, lastPage),
-      previous: this.getPreviousPage(resolvedPage, lastPage),
+      nextPage,
+      previousPage,
+    };
+  }
+
+  private resolveResponseInformation(
+    total: number,
+    options: PaginatorOptions<T>
+  ) {
+    const { limit, page } = options;
+
+    if (total === 0) {
+      return this.makeEmptyResponseInformation(limit);
+    }
+
+    const lastPage = Math.ceil(total / limit);
+
+    const { nextPage, previousPage } = this.resolvePages(page, lastPage);
+
+    return {
+      limitRows: limit,
+      pages: {
+        currentPage: page,
+        lastPage,
+        nextPage,
+        previousPage,
+      },
+      totalRows: total,
     };
   }
 
   public async paginate(
     repository: Repository<T>,
     options: PaginatorOptions<T>
-  ): Promise<PaginatorResult<T>> {
+  ): Promise<PaginatorResponse<T>> {
     try {
-      const repositoryData = await this.getRepositoryData(repository, options);
+      const [data, total] = await this.fetchRepository(repository, options);
 
-      const { totalPages } = repositoryData;
-      const pages = this.resolvePages(options, totalPages);
+      const responseInformation = this.resolveResponseInformation(
+        total,
+        options
+      );
 
       return {
-        ...repositoryData,
-        ...pages,
+        responseData: data,
+        responseInformation,
       };
     } catch (err) {
       console.error(err);
