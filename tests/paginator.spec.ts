@@ -154,14 +154,14 @@ describe('Paginator Tests', () => {
 
     const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
 
-    const properties = {
+    const options = {
       limit: 6,
       page: 5,
     };
 
-    await sut.paginate(repository, properties);
+    await sut.paginate(repository, options);
 
-    const expectedSkip = (properties.page - 1) * 6;
+    const expectedSkip = (options.page - 1) * 6;
 
     expect(findAndCountSpy).toHaveBeenCalledWith({
       skip: expectedSkip,

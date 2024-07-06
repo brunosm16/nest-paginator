@@ -3,59 +3,43 @@
 import type { FindManyOptions, Repository } from 'typeorm';
 
 import type {
+  PaginatorOptions,
   PaginatorPages,
-  PaginatorQuery,
   PaginatorRepositoryData,
   PaginatorResult,
 } from '../types';
 
-import { PaginatorBase } from './paginator-base';
+import { PaginatorAbstract } from './paginator-abstract';
 
-export class Paginator<T> extends PaginatorBase<T> {
+export class Paginator<T> extends PaginatorAbstract<T> {
   constructor() {
     super();
   }
 
-  private getNextPage(page: number, lastPage: number): null | number {
-    let next = page;
-
-    if (page >= lastPage) {
+  private getNextPage(page: number, limitPage: number): null | number {
+    if (page >= limitPage) {
       return null;
     }
 
-    if (page < lastPage) {
-      next += 1;
-    }
-
-    return next;
+    return page + 1;
   }
 
   private getPreviousPage(page: number, lastPage: number): null | number {
-    let previous = page;
-
-    if (previous > lastPage) {
+    if (page > lastPage || page <= 1) {
       return null;
     }
 
-    if (previous <= 1) {
-      return null;
-    }
-
-    if (previous > 1) {
-      previous -= 1;
-    }
-
-    return previous;
+    return page - 1;
   }
 
   private async getRepositoryData(
     repository: Repository<T>,
-    query: PaginatorQuery<T>
+    options: PaginatorOptions<T>
   ): Promise<PaginatorRepositoryData<T>> {
-    const findOptions = this.resolveFindOptions(query);
+    const findOptions = this.resolveFindOptions(options);
     const [items, total] = await repository.findAndCount(findOptions);
 
-    const { limit } = query;
+    const { limit } = options;
 
     const totalPages = Math.ceil(total / limit);
 
@@ -67,10 +51,8 @@ export class Paginator<T> extends PaginatorBase<T> {
     };
   }
 
-  private resolveFindOptions(
-    properties: PaginatorQuery<T>
-  ): FindManyOptions<T> {
-    const { limit, page, query = {} } = properties;
+  private resolveFindOptions(options: PaginatorOptions<T>): FindManyOptions<T> {
+    const { limit, page, query = {} } = options;
     const resolvedPage = this.resolvePageToRepository(page);
 
     const skip = resolvedPage * limit;
@@ -99,7 +81,7 @@ export class Paginator<T> extends PaginatorBase<T> {
   }
 
   private resolvePages(
-    query: PaginatorQuery<T>,
+    query: PaginatorOptions<T>,
     lastPage: number
   ): PaginatorPages {
     const { page } = query;
@@ -114,13 +96,13 @@ export class Paginator<T> extends PaginatorBase<T> {
 
   public async paginate(
     repository: Repository<T>,
-    query: PaginatorQuery<T>
+    options: PaginatorOptions<T>
   ): Promise<PaginatorResult<T>> {
     try {
-      const repositoryData = await this.getRepositoryData(repository, query);
+      const repositoryData = await this.getRepositoryData(repository, options);
 
       const { totalPages } = repositoryData;
-      const pages = this.resolvePages(query, totalPages);
+      const pages = this.resolvePages(options, totalPages);
 
       return {
         ...repositoryData,
