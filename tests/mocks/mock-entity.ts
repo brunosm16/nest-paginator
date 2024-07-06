@@ -1,6 +1,6 @@
 export interface MockEntity {
   createdAt: Date;
   description: string;
-  id: number;
+  id: string;
   name: string;
 }

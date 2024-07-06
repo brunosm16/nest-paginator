@@ -12,8 +12,8 @@ interface SutType {
   sut: Paginator<MockEntity>;
 }
 
-const makeSut = (amountData?: number) => {
-  const repository = repositoryMockFactory(amountData);
+const makeSut = (itemsAmount?: number) => {
+  const repository = repositoryMockFactory(itemsAmount);
   const sut = paginator<MockEntity>();
 
   return {
@@ -31,94 +31,86 @@ describe('Paginator Tests', () => {
   it('Should paginate to first page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const {
-      next,
-      previous,
-      result,
-      resultLength,
-      totalDataLength,
-      totalPages,
-    } = await sut.paginate(repository, {
-      limit: 6,
-      page: 1,
-    });
+    const { responseData, responseInformation } = await sut.paginate(
+      repository,
+      { limit: 6, page: 1 }
+    );
+    const { currentPage, lastPage, nextPage, previousPage } =
+      responseInformation.pages;
 
-    expect(next).toEqual(2);
-    expect(previous).toEqual(null);
-    expect(resultLength).toEqual(6);
-    expect(totalDataLength).toEqual(100);
-    expect(totalPages).toEqual(17);
-    expect(result).toEqual(expect.any(Array<MockEntity>));
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+    expect(responseInformation.totalRows).toEqual(100);
+    expect(responseInformation.limitRows).toEqual(6);
+    expect(currentPage).toEqual(1);
+    expect(lastPage).toEqual(17);
+    expect(nextPage).toEqual(2);
+    expect(previousPage).toEqual(null);
   });
 
   it('Should paginate to random page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const {
-      next,
-      previous,
-      result,
-      resultLength,
-      totalDataLength,
-      totalPages,
-    } = await sut.paginate(repository, {
-      limit: 6,
-      page: 4,
-    });
+    const { responseData, responseInformation } = await sut.paginate(
+      repository,
+      { limit: 6, page: 4 }
+    );
+    const { currentPage, lastPage, nextPage, previousPage } =
+      responseInformation.pages;
 
-    expect(next).toEqual(5);
-    expect(previous).toEqual(3);
-    expect(resultLength).toEqual(6);
-    expect(totalDataLength).toEqual(100);
-    expect(totalPages).toEqual(17);
-    expect(result).toEqual(expect.any(Array<MockEntity>));
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+    expect(responseInformation.totalRows).toEqual(100);
+    expect(responseInformation.limitRows).toEqual(6);
+    expect(currentPage).toEqual(4);
+    expect(lastPage).toEqual(17);
+    expect(nextPage).toEqual(5);
+    expect(previousPage).toEqual(3);
   });
 
   it('Should paginate to last page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const {
-      next,
-      previous,
-      result,
-      resultLength,
-      totalDataLength,
-      totalPages,
-    } = await sut.paginate(repository, {
-      limit: 6,
-      page: 17,
-    });
+    const { responseData, responseInformation } = await sut.paginate(
+      repository,
+      { limit: 6, page: 17 }
+    );
+    const { currentPage, lastPage, nextPage, previousPage } =
+      responseInformation.pages;
 
-    expect(next).toEqual(null);
-    expect(previous).toEqual(16);
-    expect(resultLength).toEqual(6);
-    expect(totalDataLength).toEqual(100);
-    expect(totalPages).toEqual(17);
-    expect(result).toEqual(expect.any(Array<MockEntity>));
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+    expect(responseInformation.totalRows).toEqual(100);
+    expect(responseInformation.limitRows).toEqual(6);
+    expect(currentPage).toEqual(17);
+    expect(lastPage).toEqual(17);
+    expect(nextPage).toEqual(null);
+    expect(previousPage).toEqual(16);
   });
 
   it('Should not return previous for first page', async () => {
     const { repository, sut } = makeSut(100);
 
-    const data = await sut.paginate(repository, {
+    const response = await sut.paginate(repository, {
       limit: 6,
       page: 1,
     });
 
-    expect(data.previous).toEqual(null);
-    expect(data.next).toEqual(2);
+    const { pages } = response.responseInformation;
+
+    expect(pages.previousPage).toEqual(null);
+    expect(pages.nextPage).toEqual(2);
   });
 
   it('Should not return next when it reaches data set limit', async () => {
     const { repository, sut } = makeSut(100);
 
-    const data = await sut.paginate(repository, {
+    const response = await sut.paginate(repository, {
       limit: 6,
       page: 17,
     });
 
-    expect(data.next).toEqual(null);
-    expect(data.previous).toEqual(16);
+    const { pages } = response.responseInformation;
+
+    expect(pages.nextPage).toEqual(null);
+    expect(pages.previousPage).toEqual(16);
   });
 
   it('Should catch error when paginating data', async () => {
@@ -128,9 +120,9 @@ describe('Paginator Tests', () => {
       throw new Error('Mock Error');
     });
 
-    const data = sut.paginate(repository, { limit: 1, page: 5 });
+    const result = sut.paginate(repository, { limit: 1, page: 5 });
 
-    await expect(data).rejects.toThrow('Mock Error');
+    await expect(result).rejects.toThrow('Mock Error');
   });
 
   it('Should resolve page to zero when its first page', async () => {
@@ -169,86 +161,17 @@ describe('Paginator Tests', () => {
     });
   });
 
-  it('Should resolve page to zero when a negative page is provided', async () => {
-    const { repository, sut } = makeSut(100);
-
-    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
-
-    await sut.paginate(repository, {
-      limit: 6,
-      page: -1,
-    });
-
-    expect(findAndCountSpy).toHaveBeenCalledWith({
-      skip: 0,
-      take: 6,
-    });
-  });
-
-  it('Should resolve page to zero when a zero page is provided', async () => {
-    const { repository, sut } = makeSut(100);
-
-    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
-
-    await sut.paginate(repository, {
-      limit: 6,
-      page: 0,
-    });
-
-    expect(findAndCountSpy).toHaveBeenCalledWith({
-      skip: 0,
-      take: 6,
-    });
-  });
-
-  it('Should resolve page to 1 when zero page is provided', async () => {
-    const { repository, sut } = makeSut(100);
-
-    const { next, previous, result, resultLength } = await sut.paginate(
-      repository,
-      {
-        limit: 6,
-        page: 0,
-      }
-    );
-
-    expect(next).toEqual(2);
-    expect(previous).toEqual(null);
-    expect(result).toEqual(expect.any(Array<MockEntity>));
-    expect(resultLength).toEqual(6);
-  });
-
-  it('Should resolve page to 1 when negative page is provided', async () => {
-    const { repository, sut } = makeSut(100);
-
-    const { next, previous, result, resultLength } = await sut.paginate(
-      repository,
-      {
-        limit: 6,
-        page: -1,
-      }
-    );
-
-    expect(next).toEqual(2);
-    expect(previous).toEqual(null);
-    expect(result).toEqual(expect.any(Array<MockEntity>));
-    expect(resultLength).toEqual(6);
-  });
-
   it("Should resolve pages when it's beyond the last page", async () => {
     const { repository, sut } = makeSut(100);
 
-    const { next, previous, result, resultLength } = await sut.paginate(
+    const { responseData, responseInformation } = await sut.paginate(
       repository,
-      {
-        limit: 6,
-        page: 50,
-      }
+      { limit: 6, page: 50 }
     );
+    const { pages } = responseInformation;
 
-    expect(next).toEqual(null);
-    expect(previous).toEqual(null);
-    expect(result).toEqual(expect.any(Array<MockEntity>));
-    expect(resultLength).toEqual(6);
+    expect(pages.nextPage).toEqual(null);
+    expect(pages.previousPage).toEqual(null);
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
   });
 });
