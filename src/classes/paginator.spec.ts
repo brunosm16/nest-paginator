@@ -178,7 +178,7 @@ describe('Paginator Tests', () => {
     expect(responseData).toEqual(expect.any(Array<MockEntity>));
   });
 
-  it('Should translate zod error', async () => {
+  it('Should catch zod error', async () => {
     const { repository, sut } = makeSut(100);
 
     const zodValidateMock = zodValidate as jest.Mock<
