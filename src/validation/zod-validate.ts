@@ -10,9 +10,12 @@ class ZodValidationError extends Error {
 }
 
 const formatZodError = (error: ZodError): ZodValidationError => {
-  const formattedErrors = error?.issues.map(
-    (issue) => issue.message ?? 'No message error provided'
-  );
+  const formattedErrors = error?.issues.map((issue) => {
+    const path = issue.path.join('.');
+    const issueMessage = issue.message ?? 'No message error provided';
+    const message = `Error at '${path}': ${issueMessage}`;
+    return message;
+  });
 
   const schemaError = new ZodValidationError(formattedErrors);
 
