@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 /* eslint-disable @typescript-eslint/no-useless-constructor */
 
 import type { FindManyOptions, Repository } from 'typeorm';
@@ -124,7 +125,6 @@ export class Paginator<T> extends PaginatorAbstract<T> {
         responseInformation,
       };
     } catch (err) {
-      console.error(err);
       throw err;
     }
   }

@@ -1,41 +1,52 @@
-import type { Repository } from 'typeorm';
-
 import { Paginator } from '@/classes/paginator';
 import paginator from '@/factories/make-paginator';
 import { zodValidate } from '@/validation/zod-validate';
 
 import type { MockEntity } from '../../tests/mocks';
 
-import { repositoryMockFactory } from '../../tests/factories';
+import { sqliteDatabaseTestFactory } from '../../tests/factories/sqlite-database-test-factory';
 
 jest.mock('@/validation/zod-validate');
 
 interface SutType {
-  repository: Repository<MockEntity>;
   sut: Paginator<MockEntity>;
 }
 
-const makeSut = (itemsAmount?: number) => {
-  const repository = repositoryMockFactory(itemsAmount);
+const makeSut = () => {
   const sut = paginator<MockEntity>();
 
   return {
-    repository,
     sut,
   } as SutType;
 };
 
+const DATABASE_MOCK_ITEMS_AMOUNT = 100;
+
 describe('Paginator Tests', () => {
+  const testingDatabase = sqliteDatabaseTestFactory();
+  let mockEntityRepository = null;
+
+  beforeAll(async () => {
+    await testingDatabase.initialize();
+    await testingDatabase.seed(DATABASE_MOCK_ITEMS_AMOUNT);
+    mockEntityRepository = testingDatabase.mockEntityRepository;
+  });
+
+  afterAll(async () => {
+    await testingDatabase.clearDatabase();
+    await testingDatabase.closeDatabase();
+  });
+
   it('Should create a Paginator instance correctly', () => {
     const { sut } = makeSut();
     expect(sut).toBeInstanceOf(Paginator);
   });
 
   it('Should paginate to first page', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
     const { responseData, responseInformation } = await sut.paginate(
-      repository,
+      mockEntityRepository,
       { limit: 6, page: 1 }
     );
     const { currentPage, lastPage, nextPage, previousPage } =
@@ -51,10 +62,10 @@ describe('Paginator Tests', () => {
   });
 
   it('Should paginate to random page', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
     const { responseData, responseInformation } = await sut.paginate(
-      repository,
+      mockEntityRepository,
       { limit: 6, page: 4 }
     );
     const { currentPage, lastPage, nextPage, previousPage } =
@@ -70,10 +81,10 @@ describe('Paginator Tests', () => {
   });
 
   it('Should paginate to last page', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
     const { responseData, responseInformation } = await sut.paginate(
-      repository,
+      mockEntityRepository,
       { limit: 6, page: 17 }
     );
     const { currentPage, lastPage, nextPage, previousPage } =
@@ -89,9 +100,9 @@ describe('Paginator Tests', () => {
   });
 
   it('Should not return previous for first page', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
-    const response = await sut.paginate(repository, {
+    const response = await sut.paginate(mockEntityRepository, {
       limit: 6,
       page: 1,
     });
@@ -103,9 +114,9 @@ describe('Paginator Tests', () => {
   });
 
   it('Should not return next when it reaches data set limit', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
-    const response = await sut.paginate(repository, {
+    const response = await sut.paginate(mockEntityRepository, {
       limit: 6,
       page: 17,
     });
@@ -117,23 +128,25 @@ describe('Paginator Tests', () => {
   });
 
   it('Should catch error when paginating data', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
-    jest.spyOn(repository, 'findAndCount').mockImplementationOnce(() => {
-      throw new Error('Mock Error');
-    });
+    jest
+      .spyOn(mockEntityRepository, 'findAndCount')
+      .mockImplementationOnce(() => {
+        throw new Error('Mock Error');
+      });
 
-    const result = sut.paginate(repository, { limit: 1, page: 5 });
+    const result = sut.paginate(mockEntityRepository, { limit: 1, page: 5 });
 
     await expect(result).rejects.toThrow('Mock Error');
   });
 
   it('Should resolve page to zero when its first page', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
-    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
+    const findAndCountSpy = jest.spyOn(mockEntityRepository, 'findAndCount');
 
-    await sut.paginate(repository, {
+    await sut.paginate(mockEntityRepository, {
       limit: 6,
       page: 1,
     });
@@ -145,16 +158,16 @@ describe('Paginator Tests', () => {
   });
 
   it('Should resolve page when page its greater than 1', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
-    const findAndCountSpy = jest.spyOn(repository, 'findAndCount');
+    const findAndCountSpy = jest.spyOn(mockEntityRepository, 'findAndCount');
 
     const options = {
       limit: 6,
       page: 5,
     };
 
-    await sut.paginate(repository, options);
+    await sut.paginate(mockEntityRepository, options);
 
     const expectedSkip = (options.page - 1) * 6;
 
@@ -165,10 +178,10 @@ describe('Paginator Tests', () => {
   });
 
   it("Should resolve pages when it's beyond the last page", async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
     const { responseData, responseInformation } = await sut.paginate(
-      repository,
+      mockEntityRepository,
       { limit: 6, page: 50 }
     );
     const { pages } = responseInformation;
@@ -179,7 +192,7 @@ describe('Paginator Tests', () => {
   });
 
   it('Should catch zod error', async () => {
-    const { repository, sut } = makeSut(100);
+    const { sut } = makeSut();
 
     const zodValidateMock = zodValidate as jest.Mock<
       ReturnType<typeof zodValidate>
@@ -189,7 +202,7 @@ describe('Paginator Tests', () => {
       throw new Error('Mock Error');
     });
 
-    const promise = sut.paginate(repository, { limit: 6, page: 1 });
+    const promise = sut.paginate(mockEntityRepository, { limit: 6, page: 1 });
     expect(promise).rejects.toThrow('Mock Error');
   });
 });
