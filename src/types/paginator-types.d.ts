@@ -1,28 +1,25 @@
 import type { FindManyOptions } from 'typeorm';
 
-export type PaginatorResult<T> = {
-  next: number;
-  previous: number;
-  result: T[];
-  resultLength: number;
-  totalDataLength: number;
-  totalPages: number;
-};
-
-export type PaginatorRepositoryData<T> = {
-  result: T[];
-  resultLength: number;
-  totalDataLength: number;
-  totalPages: number;
-};
-
-export type PaginatorQuery<T> = {
+export type PaginatorOptions<T> = {
   limit: number;
   page: number;
   query?: FindManyOptions<T>;
 };
 
+export type PaginatorResponse<T> = {
+  responseData: T[];
+  responseInformation: PaginatorResponseInformation;
+};
+
+export type PaginatorResponseInformation = {
+  limitRows: number;
+  pages: PaginatorPages;
+  totalRows: number;
+};
+
 export type PaginatorPages = {
-  next: null | number;
-  previous: null | number;
+  currentPage: null | number;
+  lastPage: null | number;
+  nextPage: null | number;
+  previousPage: null | number;
 };

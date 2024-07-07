@@ -2,78 +2,65 @@
 
 import type { FindManyOptions, Repository } from 'typeorm';
 
+import { PaginatorOptionsSchema } from '@/schemas/options-schema';
+import { zodValidate } from '@/validation/zod-validate';
+
 import type {
-  PaginatorPages,
-  PaginatorQuery,
-  PaginatorRepositoryData,
-  PaginatorResult,
+  PaginatorOptions,
+  PaginatorResponse,
+  PaginatorResponseInformation,
 } from '../types';
 
-import { PaginatorBase } from './paginator-base';
+import { PaginatorAbstract } from './paginator-abstract';
 
-export class Paginator<T> extends PaginatorBase<T> {
+export class Paginator<T> extends PaginatorAbstract<T> {
   constructor() {
     super();
   }
 
-  private getNextPage(page: number, lastPage: number): null | number {
-    let next = page;
+  private async fetchRepository(
+    repository: Repository<T>,
+    options: PaginatorOptions<T>
+  ) {
+    const findOptions = this.resolveFindOptions(options);
+    return repository.findAndCount(findOptions);
+  }
 
-    if (page >= lastPage) {
+  private getNextPage(page: number, limitPage: number): null | number {
+    if (page >= limitPage) {
       return null;
     }
 
-    if (page < lastPage) {
-      next += 1;
-    }
-
-    return next;
+    return page + 1;
   }
 
   private getPreviousPage(page: number, lastPage: number): null | number {
-    let previous = page;
-
-    if (previous > lastPage) {
+    if (page > lastPage || page <= 1) {
       return null;
     }
 
-    if (previous <= 1) {
-      return null;
-    }
-
-    if (previous > 1) {
-      previous -= 1;
-    }
-
-    return previous;
+    return page - 1;
   }
 
-  private async getRepositoryData(
-    repository: Repository<T>,
-    query: PaginatorQuery<T>
-  ): Promise<PaginatorRepositoryData<T>> {
-    const findOptions = this.resolveFindOptions(query);
-    const [items, total] = await repository.findAndCount(findOptions);
-
-    const { limit } = query;
-
-    const totalPages = Math.ceil(total / limit);
-
+  private makeEmptyResponseInformation(
+    limit: number
+  ): PaginatorResponseInformation {
     return {
-      result: items,
-      resultLength: items.length,
-      totalDataLength: total,
-      totalPages,
+      limitRows: limit,
+      pages: {
+        currentPage: null,
+        lastPage: null,
+        nextPage: null,
+        previousPage: null,
+      },
+      totalRows: 0,
     };
   }
 
-  private resolveFindOptions(
-    properties: PaginatorQuery<T>
-  ): FindManyOptions<T> {
-    const { limit, page, query = {} } = properties;
-    const resolvedPage = this.resolvePageToRepository(page);
+  private resolveFindOptions(options: PaginatorOptions<T>): FindManyOptions<T> {
+    const { limit, page, query = {} } = options;
 
-    const skip = resolvedPage * limit;
+    const skip = (page - 1) * limit;
 
     return {
       skip,
@@ -82,49 +69,59 @@ export class Paginator<T> extends PaginatorBase<T> {
     };
   }
 
-  private resolvePageToRepository(page: number): number {
-    if (page <= 0) {
-      return 0;
-    }
-
-    return page - 1;
-  }
-
-  private resolvePageToResult(page: number): number {
-    if (page <= 0) {
-      return 1;
-    }
-
-    return page;
-  }
-
-  private resolvePages(
-    query: PaginatorQuery<T>,
-    lastPage: number
-  ): PaginatorPages {
-    const { page } = query;
-
-    const resolvedPage = this.resolvePageToResult(page);
+  private resolvePages(page: number, lastPage: number) {
+    const nextPage = this.getNextPage(page, lastPage);
+    const previousPage = this.getPreviousPage(page, lastPage);
 
     return {
-      next: this.getNextPage(resolvedPage, lastPage),
-      previous: this.getPreviousPage(resolvedPage, lastPage),
+      nextPage,
+      previousPage,
+    };
+  }
+
+  private resolveResponseInformation(
+    total: number,
+    options: PaginatorOptions<T>
+  ) {
+    const { limit, page } = options;
+
+    if (total === 0) {
+      return this.makeEmptyResponseInformation(limit);
+    }
+
+    const lastPage = Math.ceil(total / limit);
+
+    const { nextPage, previousPage } = this.resolvePages(page, lastPage);
+
+    return {
+      limitRows: limit,
+      pages: {
+        currentPage: page,
+        lastPage,
+        nextPage,
+        previousPage,
+      },
+      totalRows: total,
     };
   }
 
   public async paginate(
     repository: Repository<T>,
-    query: PaginatorQuery<T>
-  ): Promise<PaginatorResult<T>> {
+    options: PaginatorOptions<T>
+  ): Promise<PaginatorResponse<T>> {
     try {
-      const repositoryData = await this.getRepositoryData(repository, query);
+      zodValidate(PaginatorOptionsSchema, options);
 
-      const { totalPages } = repositoryData;
-      const pages = this.resolvePages(query, totalPages);
+      const [data, total] = await this.fetchRepository(repository, options);
+
+      const responseInformation = this.resolveResponseInformation(
+        total,
+        options
+      );
 
       return {
-        ...repositoryData,
-        ...pages,
+        responseData: data,
+        responseInformation,
       };
     } catch (err) {
       console.error(err);
