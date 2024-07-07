@@ -2,10 +2,13 @@ import type { Repository } from 'typeorm';
 
 import { Paginator } from '@/classes/paginator';
 import paginator from '@/factories/make-paginator';
+import { zodValidate } from '@/validation/zod-validate';
 
-import type { MockEntity } from './mocks';
+import type { MockEntity } from '../../tests/mocks';
 
-import { repositoryMockFactory } from './factories';
+import { repositoryMockFactory } from '../../tests/factories';
+
+jest.mock('@/validation/zod-validate');
 
 interface SutType {
   repository: Repository<MockEntity>;
@@ -173,5 +176,20 @@ describe('Paginator Tests', () => {
     expect(pages.nextPage).toEqual(null);
     expect(pages.previousPage).toEqual(null);
     expect(responseData).toEqual(expect.any(Array<MockEntity>));
+  });
+
+  it('Should translate zod error', async () => {
+    const { repository, sut } = makeSut(100);
+
+    const zodValidateMock = zodValidate as jest.Mock<
+      ReturnType<typeof zodValidate>
+    >;
+
+    zodValidateMock.mockImplementationOnce(() => {
+      throw new Error('Mock Error');
+    });
+
+    const promise = sut.paginate(repository, { limit: 6, page: 1 });
+    expect(promise).rejects.toThrow('Mock Error');
   });
 });

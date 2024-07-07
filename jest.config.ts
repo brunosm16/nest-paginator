@@ -9,13 +9,13 @@ const config: Config.InitialOptions = {
     '@/(.*)': '<rootDir>/src/$1',
     '@/tests/(.*)': '<rootDir>/tests/$1',
   },
-  roots: ['<rootDir>/tests'],
+  roots: ['<rootDir>/src'],
   testEnvironment: 'node',
   testMatch: [
-    '<rootDir>/tests/**/*.test.(ts)',
-    '<rootDir>/tests/**/*.spec.(ts)',
-    '<rootDir>/tests/*.test.(ts)',
-    '<rootDir>/tests/*.spec.(ts)',
+    '<rootDir>/src/**/*.test.(ts)',
+    '<rootDir>/src/**/*.spec.(ts)',
+    '<rootDir>/src/*.test.(ts)',
+    '<rootDir>/src/*.spec.(ts)',
   ],
   verbose: true,
 };
