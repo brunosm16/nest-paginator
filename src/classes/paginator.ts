@@ -39,7 +39,7 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     const { limit, page } = options;
 
     return queryBuilder
-      .limit(limit)
+      .take(limit)
       .offset(page * limit)
       .getManyAndCount();
   }
