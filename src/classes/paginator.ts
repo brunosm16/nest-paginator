@@ -1,12 +1,14 @@
 /* eslint-disable no-useless-catch */
 /* eslint-disable @typescript-eslint/no-useless-constructor */
 
-import type { FindManyOptions, Repository } from 'typeorm';
+import type { FindManyOptions, SelectQueryBuilder } from 'typeorm';
 
 import { PaginatorOptionsSchema } from '@/schemas/options-schema';
 import { zodValidate } from '@/validation/zod-validate';
+import { Repository } from 'typeorm';
 
 import type {
+  PaginatorAllowedInstances,
   PaginatorOptions,
   PaginatorResponse,
   PaginatorResponseInformation,
@@ -17,6 +19,29 @@ import { PaginatorAbstract } from './paginator-abstract';
 export class Paginator<T> extends PaginatorAbstract<T> {
   constructor() {
     super();
+  }
+
+  private async fetchDataPaginated(
+    typeOrmInstance: PaginatorAllowedInstances<T>,
+    options: PaginatorOptions<T>
+  ) {
+    if (typeOrmInstance instanceof Repository) {
+      return this.fetchRepository(typeOrmInstance, options);
+    }
+
+    return this.fetchQueryBuilder(typeOrmInstance, options);
+  }
+
+  private async fetchQueryBuilder(
+    queryBuilder: SelectQueryBuilder<T>,
+    options: PaginatorOptions<T>
+  ) {
+    const { limit, page } = options;
+
+    return queryBuilder
+      .limit(limit)
+      .offset(page * limit)
+      .getManyAndCount();
   }
 
   private async fetchRepository(
@@ -107,13 +132,16 @@ export class Paginator<T> extends PaginatorAbstract<T> {
   }
 
   public async paginate(
-    repository: Repository<T>,
+    typeOrmInstance: PaginatorAllowedInstances<T>,
     options: PaginatorOptions<T>
   ): Promise<PaginatorResponse<T>> {
     try {
       zodValidate(PaginatorOptionsSchema, options);
 
-      const [data, total] = await this.fetchRepository(repository, options);
+      const [data, total] = await this.fetchDataPaginated(
+        typeOrmInstance,
+        options
+      );
 
       const responseInformation = this.resolveResponseInformation(
         total,

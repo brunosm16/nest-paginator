@@ -1,3 +1,5 @@
+import type { Repository, SelectQueryBuilder } from 'typeorm';
+
 import { Paginator } from '@/classes/paginator';
 import paginator from '@/factories/make-paginator';
 import { zodValidate } from '@/validation/zod-validate';
@@ -24,12 +26,15 @@ const DATABASE_MOCK_ITEMS_AMOUNT = 100;
 
 describe('Paginator Tests', () => {
   const testingDatabase = sqliteDatabaseTestFactory();
-  let mockEntityRepository = null;
+  let mockEntityRepository: Repository<MockEntity> = null;
+  let mockQueryBuilder: SelectQueryBuilder<MockEntity> = null;
 
   beforeAll(async () => {
     await testingDatabase.initialize();
     await testingDatabase.seed(DATABASE_MOCK_ITEMS_AMOUNT);
+
     mockEntityRepository = testingDatabase.mockEntityRepository;
+    mockQueryBuilder = mockEntityRepository.createQueryBuilder();
   });
 
   afterAll(async () => {
@@ -203,6 +208,134 @@ describe('Paginator Tests', () => {
     });
 
     const promise = sut.paginate(mockEntityRepository, { limit: 6, page: 1 });
+    expect(promise).rejects.toThrow('Mock Error');
+  });
+
+  it('Should paginate with query builder to first page', async () => {
+    const { sut } = makeSut();
+
+    const { responseData, responseInformation } = await sut.paginate(
+      mockQueryBuilder,
+      { limit: 6, page: 1 }
+    );
+    const { currentPage, lastPage, nextPage, previousPage } =
+      responseInformation.pages;
+
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+    expect(responseInformation.totalRows).toEqual(100);
+    expect(responseInformation.limitRows).toEqual(6);
+    expect(currentPage).toEqual(1);
+    expect(lastPage).toEqual(17);
+    expect(nextPage).toEqual(2);
+    expect(previousPage).toEqual(null);
+  });
+
+  it('Should paginate with query builder to random page', async () => {
+    const { sut } = makeSut();
+
+    const { responseData, responseInformation } = await sut.paginate(
+      mockQueryBuilder,
+      { limit: 6, page: 4 }
+    );
+    const { currentPage, lastPage, nextPage, previousPage } =
+      responseInformation.pages;
+
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+    expect(responseInformation.totalRows).toEqual(100);
+    expect(responseInformation.limitRows).toEqual(6);
+    expect(currentPage).toEqual(4);
+    expect(lastPage).toEqual(17);
+    expect(nextPage).toEqual(5);
+    expect(previousPage).toEqual(3);
+  });
+
+  it('Should paginate with query builder to last page', async () => {
+    const { sut } = makeSut();
+
+    const { responseData, responseInformation } = await sut.paginate(
+      mockQueryBuilder,
+      { limit: 6, page: 17 }
+    );
+    const { currentPage, lastPage, nextPage, previousPage } =
+      responseInformation.pages;
+
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+    expect(responseInformation.totalRows).toEqual(100);
+    expect(responseInformation.limitRows).toEqual(6);
+    expect(currentPage).toEqual(17);
+    expect(lastPage).toEqual(17);
+    expect(nextPage).toEqual(null);
+    expect(previousPage).toEqual(16);
+  });
+
+  it('Should not return previous for first page with query builder', async () => {
+    const { sut } = makeSut();
+
+    const response = await sut.paginate(mockQueryBuilder, {
+      limit: 6,
+      page: 1,
+    });
+
+    const { pages } = response.responseInformation;
+
+    expect(pages.previousPage).toEqual(null);
+    expect(pages.nextPage).toEqual(2);
+  });
+
+  it('Should not return next when it reaches data set limit with query builder', async () => {
+    const { sut } = makeSut();
+
+    const response = await sut.paginate(mockQueryBuilder, {
+      limit: 6,
+      page: 17,
+    });
+
+    const { pages } = response.responseInformation;
+
+    expect(pages.nextPage).toEqual(null);
+    expect(pages.previousPage).toEqual(16);
+  });
+
+  it('Should catch error when paginating data with query builder', async () => {
+    const { sut } = makeSut();
+
+    jest
+      .spyOn(mockQueryBuilder, 'getManyAndCount')
+      .mockImplementationOnce(() => {
+        throw new Error('Mock Error');
+      });
+
+    const result = sut.paginate(mockQueryBuilder, { limit: 1, page: 5 });
+
+    await expect(result).rejects.toThrow('Mock Error');
+  });
+
+  it("Should resolve pages when it's beyond the last page with query builder", async () => {
+    const { sut } = makeSut();
+
+    const { responseData, responseInformation } = await sut.paginate(
+      mockQueryBuilder,
+      { limit: 6, page: 50 }
+    );
+    const { pages } = responseInformation;
+
+    expect(pages.nextPage).toEqual(null);
+    expect(pages.previousPage).toEqual(null);
+    expect(responseData).toEqual(expect.any(Array<MockEntity>));
+  });
+
+  it('Should catch zod error with query builder', async () => {
+    const { sut } = makeSut();
+
+    const zodValidateMock = zodValidate as jest.Mock<
+      ReturnType<typeof zodValidate>
+    >;
+
+    zodValidateMock.mockImplementationOnce(() => {
+      throw new Error('Mock Error');
+    });
+
+    const promise = sut.paginate(mockQueryBuilder, { limit: 6, page: 1 });
     expect(promise).rejects.toThrow('Mock Error');
   });
 });

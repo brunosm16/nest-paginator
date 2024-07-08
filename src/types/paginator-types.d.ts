@@ -1,4 +1,4 @@
-import type { FindManyOptions } from 'typeorm';
+import type { FindManyOptions, Repository, SelectQueryBuilder } from 'typeorm';
 
 export type PaginatorOptions<T> = {
   limit: number;
@@ -23,3 +23,7 @@ export type PaginatorPages = {
   nextPage: null | number;
   previousPage: null | number;
 };
+
+export type PaginatorAllowedInstances<T> =
+  | Repository<T>
+  | SelectQueryBuilder<T>;
