@@ -13,7 +13,7 @@ export class MockEntity {
   @Column()
   description: string;
 
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn()
   id: string;
 
   @Column()
