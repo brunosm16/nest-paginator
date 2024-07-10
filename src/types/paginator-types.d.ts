@@ -1,6 +1,7 @@
 import type { FindManyOptions, Repository, SelectQueryBuilder } from 'typeorm';
 
 export type PaginatorOptions<T> = {
+  isRawPagination?: boolean;
   limit: number;
   page: number;
   query?: FindManyOptions<T>;

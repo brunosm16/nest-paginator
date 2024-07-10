@@ -1,7 +1,7 @@
 /* eslint-disable no-useless-catch */
 /* eslint-disable @typescript-eslint/no-useless-constructor */
 
-import type { FindManyOptions, SelectQueryBuilder } from 'typeorm';
+import type { SelectQueryBuilder } from 'typeorm';
 
 import { PaginatorOptionsSchema } from '@/schemas/options-schema';
 import { zodValidate } from '@/validation/zod-validate';
@@ -25,21 +25,27 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     typeOrmInstance: PaginatorAllowedInstances<T>,
     options: PaginatorOptions<T>
   ) {
+    const normalizedOptions = this.normalizeOptions(options);
+
     if (typeOrmInstance instanceof Repository) {
-      return this.fetchRepository(typeOrmInstance, options);
+      return this.fetchRepository(typeOrmInstance, normalizedOptions);
     }
 
-    return this.fetchQueryBuilder(typeOrmInstance, options);
+    return this.fetchQueryBuilder(typeOrmInstance, normalizedOptions);
   }
 
   private async fetchQueryBuilder(
     queryBuilder: SelectQueryBuilder<T>,
     options: PaginatorOptions<T>
   ) {
-    const { limit, page } = options;
+    const { isRawPagination, limit, page } = options;
+
+    if (isRawPagination) {
+      return this.paginateQueryBuilderRaw(queryBuilder, limit, page);
+    }
 
     return queryBuilder
-      .take(limit)
+      .limit(limit)
       .offset(page * limit)
       .getManyAndCount();
   }
@@ -48,8 +54,13 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     repository: Repository<T>,
     options: PaginatorOptions<T>
   ) {
-    const findOptions = this.resolveFindOptions(options);
-    return repository.findAndCount(findOptions);
+    const { limit, page, query } = options;
+
+    return repository.findAndCount({
+      skip: page * limit,
+      take: limit,
+      ...query,
+    });
   }
 
   private getNextPage(page: number, limitPage: number): null | number {
@@ -83,16 +94,28 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     };
   }
 
-  private resolveFindOptions(options: PaginatorOptions<T>): FindManyOptions<T> {
-    const { limit, page, query = {} } = options;
-
-    const skip = (page - 1) * limit;
+  private normalizeOptions(options: PaginatorOptions<T>): PaginatorOptions<T> {
+    const normalizedPage = options.page - 1;
 
     return {
-      skip,
-      take: limit,
-      ...query,
+      ...options,
+      page: normalizedPage,
     };
+  }
+
+  private async paginateQueryBuilderRaw(
+    queryBuilder: SelectQueryBuilder<T>,
+    limit: number,
+    page: number
+  ) {
+    const count = await queryBuilder.getCount();
+
+    const total = await queryBuilder
+      .limit(limit)
+      .offset(page * limit)
+      .getRawMany<T>();
+
+    return [total, count] as [T[], number];
   }
 
   private resolvePages(page: number, lastPage: number) {
