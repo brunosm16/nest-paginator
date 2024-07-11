@@ -26,7 +26,7 @@ export class UserEntity {
   state: string;
 
   @PrimaryGeneratedColumn()
-  user_id: string;
+  user_id: number;
 
   @Column()
   zip_code: string;

@@ -197,13 +197,13 @@ describe('Paginator Tests', () => {
 
       const { responseData, responseInformation } = await sut.paginate(
         UserEntityRepository,
-        { limit: 10, page: 1, query: { where: { user_id: '1' } } }
+        { limit: 10, page: 1, query: { where: { user_id: 1 } } }
       );
 
       expect(findAndCountSpy).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        where: { user_id: '1' },
+        where: { user_id: 1 },
       });
 
       expect(responseData).toEqual(expect.any(Array<UserEntity>));
