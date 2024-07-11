@@ -189,6 +189,39 @@ describe('Paginator Tests', () => {
       expect(responseData).toEqual(expect.any(Array<UserEntity>));
       expect(responseData.length).toEqual(0);
     });
+
+    it('Should paginate with query option', async () => {
+      const { sut } = makeSut();
+
+      const findAndCountSpy = jest.spyOn(UserEntityRepository, 'findAndCount');
+
+      const { responseData, responseInformation } = await sut.paginate(
+        UserEntityRepository,
+        { limit: 10, page: 1, query: { where: { user_id: '1' } } }
+      );
+
+      expect(findAndCountSpy).toHaveBeenCalledWith({
+        skip: 0,
+        take: 10,
+        where: { user_id: '1' },
+      });
+
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(1);
+
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: 1,
+            lastPage: 1,
+            nextPage: null,
+            previousPage: null,
+          }),
+          totalRows: 1,
+        })
+      );
+    });
   });
 
   describe('.paginate with query builder', () => {
