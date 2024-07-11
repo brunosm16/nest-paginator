@@ -4,7 +4,7 @@ import type { DataSourceOptions } from 'typeorm';
 import { faker } from '@faker-js/faker';
 import { DataSource } from 'typeorm';
 
-import { MockEntity } from '../mocks';
+import { UserEntity } from '../entities';
 
 export class SQLiteTestingDatabase {
   private dataSource: DataSource;
@@ -17,24 +17,28 @@ export class SQLiteTestingDatabase {
     return {
       database: ':memory:',
       dropSchema: true,
-      entities: [MockEntity],
+      entities: [UserEntity],
       synchronize: true,
       type: 'better-sqlite3',
     };
   }
 
-  private mockTestEntity(): Partial<MockEntity> {
+  private mockUserEntity(): Partial<UserEntity> {
     return {
-      description: faker.lorem.lines(),
-      name: faker.person.fullName(),
+      address: faker.location.streetAddress(),
+      email: faker.internet.email(),
+      first_name: faker.person.firstName(),
+      last_name: faker.person.lastName(),
+      state: faker.location.state(),
+      zip_code: faker.location.zipCode(),
     };
   }
 
   public async clearDatabase(): Promise<void> {
     try {
-      const mockEntityRepository = this.dataSource.getRepository(MockEntity);
+      const UserEntityRepository = this.dataSource.getRepository(UserEntity);
 
-      await mockEntityRepository.clear();
+      await UserEntityRepository.clear();
     } catch (err) {
       throw err;
     }
@@ -62,13 +66,13 @@ export class SQLiteTestingDatabase {
 
   public async seed(itemsAmount: number): Promise<number> {
     try {
-      const mockEntityRepository = this.dataSource.getRepository(MockEntity);
+      const UserEntityRepository = this.dataSource.getRepository(UserEntity);
 
       const promises = [];
 
       for (let i = 0; i < itemsAmount; i += 1) {
-        const entity = this.mockTestEntity();
-        promises.push(mockEntityRepository.insert(entity));
+        const entity = this.mockUserEntity();
+        promises.push(UserEntityRepository.insert(entity));
       }
 
       const result = await Promise.all(promises);
@@ -78,7 +82,17 @@ export class SQLiteTestingDatabase {
     }
   }
 
-  public get mockEntityRepository() {
-    return this.dataSource.getRepository(MockEntity);
+  public get UserEntityRepository() {
+    return this.dataSource.getRepository(UserEntity);
+  }
+
+  public get groupByStateQuery() {
+    const queryBuilder = this.UserEntityRepository.createQueryBuilder('u');
+
+    return queryBuilder
+      .select('u.state', 'state_name')
+      .addSelect('COUNT(u.state)', 'users_state_count')
+      .groupBy('u.state')
+      .orderBy('u.state', 'ASC');
   }
 }

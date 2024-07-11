@@ -4,18 +4,18 @@ import { Paginator } from '@/classes/paginator';
 import paginator from '@/factories/make-paginator';
 import { zodValidate } from '@/validation/zod-validate';
 
-import type { MockEntity } from '../../tests/mocks';
+import type { UserEntity } from '../../tests/entities';
 
 import { sqliteDatabaseTestFactory } from '../../tests/factories/sqlite-database-test-factory';
 
 jest.mock('@/validation/zod-validate');
 
 interface SutType {
-  sut: Paginator<MockEntity>;
+  sut: Paginator<UserEntity>;
 }
 
 const makeSut = () => {
-  const sut = paginator<MockEntity>();
+  const sut = paginator<UserEntity>();
 
   return {
     sut,
@@ -26,15 +26,15 @@ const DATABASE_MOCK_ITEMS_AMOUNT = 100;
 
 describe('Paginator Tests', () => {
   const testingDatabase = sqliteDatabaseTestFactory();
-  let mockEntityRepository: Repository<MockEntity> = null;
-  let mockQueryBuilder: SelectQueryBuilder<MockEntity> = null;
+  let UserEntityRepository: Repository<UserEntity> = null;
+  let mockQueryBuilder: SelectQueryBuilder<UserEntity> = null;
 
   beforeAll(async () => {
     await testingDatabase.initialize();
     await testingDatabase.seed(DATABASE_MOCK_ITEMS_AMOUNT);
 
-    mockEntityRepository = testingDatabase.mockEntityRepository;
-    mockQueryBuilder = mockEntityRepository.createQueryBuilder();
+    UserEntityRepository = testingDatabase.UserEntityRepository;
+    mockQueryBuilder = UserEntityRepository.createQueryBuilder('u');
   });
 
   afterAll(async () => {
@@ -59,7 +59,7 @@ describe('Paginator Tests', () => {
         throw new Error('Mock Error');
       });
 
-      const promise = sut.paginate(mockEntityRepository, { limit: 6, page: 1 });
+      const promise = sut.paginate(UserEntityRepository, { limit: 6, page: 1 });
       expect(promise).rejects.toThrow('Mock Error');
     });
   });
@@ -68,10 +68,10 @@ describe('Paginator Tests', () => {
     it('Should paginate to first page', async () => {
       const { sut } = makeSut();
 
-      const findAndCountSpy = jest.spyOn(mockEntityRepository, 'findAndCount');
+      const findAndCountSpy = jest.spyOn(UserEntityRepository, 'findAndCount');
 
       const { responseData, responseInformation } = await sut.paginate(
-        mockEntityRepository,
+        UserEntityRepository,
         { limit: 10, page: 1 }
       );
 
@@ -80,8 +80,8 @@ describe('Paginator Tests', () => {
         take: 10,
       });
 
-      expect(responseData).toEqual(expect.any(Array<MockEntity>));
-      expect(responseData[0].id).toEqual(1);
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(1);
 
       expect(responseInformation).toEqual(
         expect.objectContaining({
@@ -100,10 +100,10 @@ describe('Paginator Tests', () => {
     it('Should paginate to random page', async () => {
       const { sut } = makeSut();
 
-      const findAndCountSpy = jest.spyOn(mockEntityRepository, 'findAndCount');
+      const findAndCountSpy = jest.spyOn(UserEntityRepository, 'findAndCount');
 
       const { responseData, responseInformation } = await sut.paginate(
-        mockEntityRepository,
+        UserEntityRepository,
         { limit: 10, page: 5 }
       );
 
@@ -112,8 +112,8 @@ describe('Paginator Tests', () => {
         take: 10,
       });
 
-      expect(responseData).toEqual(expect.any(Array<MockEntity>));
-      expect(responseData[0].id).toEqual(41);
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(41);
 
       expect(responseInformation).toEqual(
         expect.objectContaining({
@@ -132,10 +132,10 @@ describe('Paginator Tests', () => {
     it('Should paginate to last page', async () => {
       const { sut } = makeSut();
 
-      const findAndCountSpy = jest.spyOn(mockEntityRepository, 'findAndCount');
+      const findAndCountSpy = jest.spyOn(UserEntityRepository, 'findAndCount');
 
       const { responseData, responseInformation } = await sut.paginate(
-        mockEntityRepository,
+        UserEntityRepository,
         { limit: 10, page: 10 }
       );
 
@@ -144,8 +144,8 @@ describe('Paginator Tests', () => {
         take: 10,
       });
 
-      expect(responseData).toEqual(expect.any(Array<MockEntity>));
-      expect(responseData[0].id).toEqual(91);
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(91);
 
       expect(responseInformation).toEqual(
         expect.objectContaining({
@@ -165,12 +165,12 @@ describe('Paginator Tests', () => {
       const { sut } = makeSut();
 
       jest
-        .spyOn(mockEntityRepository, 'findAndCount')
+        .spyOn(UserEntityRepository, 'findAndCount')
         .mockImplementationOnce(() => {
           throw new Error('Mock Repository Error');
         });
 
-      const result = sut.paginate(mockEntityRepository, { limit: 1, page: 10 });
+      const result = sut.paginate(UserEntityRepository, { limit: 1, page: 10 });
 
       await expect(result).rejects.toThrow('Mock Repository Error');
     });
@@ -179,143 +179,308 @@ describe('Paginator Tests', () => {
       const { sut } = makeSut();
 
       const { responseData, responseInformation } = await sut.paginate(
-        mockEntityRepository,
+        UserEntityRepository,
         { limit: 6, page: 50 }
       );
       const { pages } = responseInformation;
 
       expect(pages.nextPage).toEqual(null);
       expect(pages.previousPage).toEqual(null);
-      expect(responseData).toEqual(expect.any(Array<MockEntity>));
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
       expect(responseData.length).toEqual(0);
     });
   });
 
-  it('Should paginate with query builder to first page', async () => {
-    const { sut } = makeSut();
+  describe('.paginate with query builder', () => {
+    it('Should paginate to first page with query builder', async () => {
+      const { sut } = makeSut();
 
-    const { responseData, responseInformation } = await sut.paginate(
-      mockQueryBuilder,
-      { limit: 6, page: 1 }
-    );
-    const { currentPage, lastPage, nextPage, previousPage } =
-      responseInformation.pages;
+      const getManyAndCount = jest.spyOn(mockQueryBuilder, 'getManyAndCount');
+      const limitSpy = jest.spyOn(mockQueryBuilder, 'limit');
+      const offsetSpy = jest.spyOn(mockQueryBuilder, 'offset');
 
-    expect(responseData).toEqual(expect.any(Array<MockEntity>));
-    expect(responseInformation.totalRows).toEqual(100);
-    expect(responseInformation.limitRows).toEqual(6);
-    expect(currentPage).toEqual(1);
-    expect(lastPage).toEqual(17);
-    expect(nextPage).toEqual(2);
-    expect(previousPage).toEqual(null);
-  });
+      const { responseData, responseInformation } = await sut.paginate(
+        mockQueryBuilder,
+        { limit: 10, page: 1 }
+      );
 
-  it('Should paginate with query builder to random page', async () => {
-    const { sut } = makeSut();
+      expect(limitSpy).toHaveBeenCalledWith(10);
+      expect(offsetSpy).toHaveBeenCalledWith(0);
+      expect(getManyAndCount).toHaveBeenCalled();
 
-    const { responseData, responseInformation } = await sut.paginate(
-      mockQueryBuilder,
-      { limit: 6, page: 4 }
-    );
-    const { currentPage, lastPage, nextPage, previousPage } =
-      responseInformation.pages;
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(1);
 
-    expect(responseData).toEqual(expect.any(Array<MockEntity>));
-    expect(responseInformation.totalRows).toEqual(100);
-    expect(responseInformation.limitRows).toEqual(6);
-    expect(currentPage).toEqual(4);
-    expect(lastPage).toEqual(17);
-    expect(nextPage).toEqual(5);
-    expect(previousPage).toEqual(3);
-  });
-
-  it('Should paginate with query builder to last page', async () => {
-    const { sut } = makeSut();
-
-    const { responseData, responseInformation } = await sut.paginate(
-      mockQueryBuilder,
-      { limit: 6, page: 17 }
-    );
-    const { currentPage, lastPage, nextPage, previousPage } =
-      responseInformation.pages;
-
-    expect(responseData).toEqual(expect.any(Array<MockEntity>));
-    expect(responseInformation.totalRows).toEqual(100);
-    expect(responseInformation.limitRows).toEqual(6);
-    expect(currentPage).toEqual(17);
-    expect(lastPage).toEqual(17);
-    expect(nextPage).toEqual(null);
-    expect(previousPage).toEqual(16);
-  });
-
-  it('Should not return previous for first page with query builder', async () => {
-    const { sut } = makeSut();
-
-    const response = await sut.paginate(mockQueryBuilder, {
-      limit: 6,
-      page: 1,
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: 1,
+            lastPage: 10,
+            nextPage: 2,
+            previousPage: null,
+          }),
+          totalRows: 100,
+        })
+      );
     });
 
-    const { pages } = response.responseInformation;
+    it('Should paginate to random page with query builder', async () => {
+      const { sut } = makeSut();
 
-    expect(pages.previousPage).toEqual(null);
-    expect(pages.nextPage).toEqual(2);
-  });
+      const getManyAndCount = jest.spyOn(mockQueryBuilder, 'getManyAndCount');
+      const limitSpy = jest.spyOn(mockQueryBuilder, 'limit');
+      const offsetSpy = jest.spyOn(mockQueryBuilder, 'offset');
 
-  it('Should not return next when it reaches data set limit with query builder', async () => {
-    const { sut } = makeSut();
+      const { responseData, responseInformation } = await sut.paginate(
+        mockQueryBuilder,
+        { limit: 10, page: 5 }
+      );
 
-    const response = await sut.paginate(mockQueryBuilder, {
-      limit: 6,
-      page: 17,
+      expect(limitSpy).toHaveBeenCalledWith(10);
+      expect(offsetSpy).toHaveBeenCalledWith(40);
+      expect(getManyAndCount).toHaveBeenCalled();
+
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(41);
+
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: 5,
+            lastPage: 10,
+            nextPage: 6,
+            previousPage: 4,
+          }),
+          totalRows: 100,
+        })
+      );
     });
 
-    const { pages } = response.responseInformation;
+    it('Should paginate to last page with query builder', async () => {
+      const { sut } = makeSut();
 
-    expect(pages.nextPage).toEqual(null);
-    expect(pages.previousPage).toEqual(16);
-  });
+      const getManyAndCount = jest.spyOn(mockQueryBuilder, 'getManyAndCount');
+      const limitSpy = jest.spyOn(mockQueryBuilder, 'limit');
+      const offsetSpy = jest.spyOn(mockQueryBuilder, 'offset');
 
-  it('Should catch error when paginating data with query builder', async () => {
-    const { sut } = makeSut();
+      const { responseData, responseInformation } = await sut.paginate(
+        mockQueryBuilder,
+        { limit: 10, page: 10 }
+      );
 
-    jest
-      .spyOn(mockQueryBuilder, 'getManyAndCount')
-      .mockImplementationOnce(() => {
+      expect(limitSpy).toHaveBeenCalledWith(10);
+      expect(offsetSpy).toHaveBeenCalledWith(90);
+      expect(getManyAndCount).toHaveBeenCalled();
+
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData[0].user_id).toEqual(91);
+
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: 10,
+            lastPage: 10,
+            nextPage: null,
+            previousPage: 9,
+          }),
+          totalRows: 100,
+        })
+      );
+    });
+
+    it('Should catch error when paginating data with query builder', async () => {
+      const { sut } = makeSut();
+
+      jest
+        .spyOn(mockQueryBuilder, 'getManyAndCount')
+        .mockImplementationOnce(() => {
+          throw new Error('Mock Error');
+        });
+
+      const result = sut.paginate(mockQueryBuilder, { limit: 1, page: 5 });
+
+      await expect(result).rejects.toThrow('Mock Error');
+    });
+
+    it("Should return empty pages when it's beyond the last page with query builder", async () => {
+      const { sut } = makeSut();
+
+      const { responseData, responseInformation } = await sut.paginate(
+        mockQueryBuilder,
+        { limit: 6, page: 50 }
+      );
+      const { pages } = responseInformation;
+
+      expect(pages.nextPage).toEqual(null);
+      expect(pages.previousPage).toEqual(null);
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+    });
+
+    it('Should catch zod error with query builder', async () => {
+      const { sut } = makeSut();
+
+      const zodValidateMock = zodValidate as jest.Mock<
+        ReturnType<typeof zodValidate>
+      >;
+
+      zodValidateMock.mockImplementationOnce(() => {
         throw new Error('Mock Error');
       });
 
-    const result = sut.paginate(mockQueryBuilder, { limit: 1, page: 5 });
-
-    await expect(result).rejects.toThrow('Mock Error');
+      const promise = sut.paginate(mockQueryBuilder, { limit: 6, page: 1 });
+      expect(promise).rejects.toThrow('Mock Error');
+    });
   });
 
-  it("Should resolve pages when it's beyond the last page with query builder", async () => {
-    const { sut } = makeSut();
+  describe('.paginate with query builder - raw pagination', () => {
+    it('Should paginate to first page with query builder - raw pagination', async () => {
+      const groupByQueryBuilder = testingDatabase.groupByStateQuery;
 
-    const { responseData, responseInformation } = await sut.paginate(
-      mockQueryBuilder,
-      { limit: 6, page: 50 }
-    );
-    const { pages } = responseInformation;
+      const { sut } = makeSut();
 
-    expect(pages.nextPage).toEqual(null);
-    expect(pages.previousPage).toEqual(null);
-    expect(responseData).toEqual(expect.any(Array<MockEntity>));
-  });
+      const getRawMany = jest.spyOn(groupByQueryBuilder, 'getRawMany');
+      const limitSpy = jest.spyOn(groupByQueryBuilder, 'limit');
+      const offsetSpy = jest.spyOn(groupByQueryBuilder, 'offset');
 
-  it('Should catch zod error with query builder', async () => {
-    const { sut } = makeSut();
+      const { responseData, responseInformation } = await sut.paginate(
+        groupByQueryBuilder,
+        {
+          isRawPagination: true,
+          limit: 10,
+          page: 1,
+        }
+      );
 
-    const zodValidateMock = zodValidate as jest.Mock<
-      ReturnType<typeof zodValidate>
-    >;
+      expect(limitSpy).toHaveBeenCalledWith(10);
+      expect(offsetSpy).toHaveBeenCalledWith(0);
+      expect(getRawMany).toHaveBeenCalled();
 
-    zodValidateMock.mockImplementationOnce(() => {
-      throw new Error('Mock Error');
+      expect(responseData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            state_name: expect.any(String),
+            users_state_count: expect.any(Number),
+          }),
+        ])
+      );
+
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: 1,
+            lastPage: 10,
+            nextPage: 2,
+            previousPage: null,
+          }),
+          totalRows: 100,
+        })
+      );
     });
 
-    const promise = sut.paginate(mockQueryBuilder, { limit: 6, page: 1 });
-    expect(promise).rejects.toThrow('Mock Error');
+    it('Should paginate to random page with query builder - raw pagination', async () => {
+      const groupByQueryBuilder = testingDatabase.groupByStateQuery;
+
+      const { sut } = makeSut();
+
+      const getRawMany = jest.spyOn(groupByQueryBuilder, 'getRawMany');
+      const limitSpy = jest.spyOn(groupByQueryBuilder, 'limit');
+      const offsetSpy = jest.spyOn(groupByQueryBuilder, 'offset');
+
+      const { responseData, responseInformation } = await sut.paginate(
+        groupByQueryBuilder,
+        {
+          isRawPagination: true,
+          limit: 10,
+          page: 5,
+        }
+      );
+
+      expect(limitSpy).toHaveBeenCalledWith(10);
+      expect(offsetSpy).toHaveBeenCalledWith(40);
+      expect(getRawMany).toHaveBeenCalled();
+
+      expect(responseData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            state_name: expect.any(String),
+            users_state_count: expect.any(Number),
+          }),
+        ])
+      );
+
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: 5,
+            lastPage: 10,
+            nextPage: 6,
+            previousPage: 4,
+          }),
+          totalRows: 100,
+        })
+      );
+    });
+
+    it('Should catch error when paginating data with query builder - raw pagination', async () => {
+      const groupByQueryBuilder = testingDatabase.groupByStateQuery;
+
+      const { sut } = makeSut();
+
+      jest
+        .spyOn(groupByQueryBuilder, 'getRawMany')
+        .mockImplementationOnce(() => {
+          throw new Error('Mock Error');
+        });
+
+      const result = sut.paginate(groupByQueryBuilder, {
+        isRawPagination: true,
+        limit: 1,
+        page: 5,
+      });
+
+      await expect(result).rejects.toThrow('Mock Error');
+    });
+
+    it("Should return empty pages when it's beyond the last page with query builder - raw pagination", async () => {
+      const groupByQueryBuilder = testingDatabase.groupByStateQuery;
+
+      const { sut } = makeSut();
+
+      const { responseInformation } = await sut.paginate(groupByQueryBuilder, {
+        isRawPagination: true,
+        limit: 6,
+        page: 50,
+      });
+      const { pages } = responseInformation;
+
+      expect(pages.nextPage).toEqual(null);
+      expect(pages.previousPage).toEqual(null);
+    });
+
+    it('Should catch zod error with query builder - raw pagination', async () => {
+      const groupByQueryBuilder = testingDatabase.groupByStateQuery;
+
+      const { sut } = makeSut();
+
+      const zodValidateMock = zodValidate as jest.Mock<
+        ReturnType<typeof zodValidate>
+      >;
+
+      zodValidateMock.mockImplementationOnce(() => {
+        throw new Error('Mock Error');
+      });
+
+      const promise = sut.paginate(groupByQueryBuilder, {
+        isRawPagination: true,
+        limit: 6,
+        page: 1,
+      });
+      expect(promise).rejects.toThrow('Mock Error');
+    });
   });
 });
