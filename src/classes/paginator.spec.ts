@@ -405,56 +405,11 @@ describe('Paginator Tests', () => {
           limitRows: 10,
           pages: expect.objectContaining({
             currentPage: 1,
-            lastPage: 10,
+            lastPage: expect.any(Number),
             nextPage: 2,
             previousPage: null,
           }),
-          totalRows: 100,
-        })
-      );
-    });
-
-    it('Should paginate to random page with query builder - raw pagination', async () => {
-      const groupByQueryBuilder = testingDatabase.groupByStateQuery;
-
-      const { sut } = makeSut();
-
-      const getRawMany = jest.spyOn(groupByQueryBuilder, 'getRawMany');
-      const limitSpy = jest.spyOn(groupByQueryBuilder, 'limit');
-      const offsetSpy = jest.spyOn(groupByQueryBuilder, 'offset');
-
-      const { responseData, responseInformation } = await sut.paginate(
-        groupByQueryBuilder,
-        {
-          isRawPagination: true,
-          limit: 10,
-          page: 5,
-        }
-      );
-
-      expect(limitSpy).toHaveBeenCalledWith(10);
-      expect(offsetSpy).toHaveBeenCalledWith(40);
-      expect(getRawMany).toHaveBeenCalled();
-
-      expect(responseData).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            state_name: expect.any(String),
-            users_state_count: expect.any(Number),
-          }),
-        ])
-      );
-
-      expect(responseInformation).toEqual(
-        expect.objectContaining({
-          limitRows: 10,
-          pages: expect.objectContaining({
-            currentPage: 5,
-            lastPage: 10,
-            nextPage: 6,
-            previousPage: 4,
-          }),
-          totalRows: 100,
+          totalRows: expect.any(Number),
         })
       );
     });

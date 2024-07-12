@@ -21,6 +21,23 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     super();
   }
 
+  private async countQueryBuilderRaw(
+    queryBuilder: SelectQueryBuilder<T>
+  ): Promise<number> {
+    const [query, queryParameters] = queryBuilder.getQueryAndParameters();
+
+    const innerQuery = `(${query})`;
+
+    const { total } = await queryBuilder
+      .createQueryBuilder()
+      .select('COUNT(*)', 'total')
+      .from(innerQuery, 'table_to_count')
+      .setParameters(queryParameters)
+      .getRawOne<{ total: number }>();
+
+    return Number(total);
+  }
+
   private async fetchDataPaginated(
     typeOrmInstance: PaginatorAllowedInstances<T>,
     options: PaginatorOptions<T>
@@ -108,14 +125,14 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     limit: number,
     page: number
   ) {
-    const count = await queryBuilder.getCount();
+    const count = await this.countQueryBuilderRaw(queryBuilder);
 
-    const total = await queryBuilder
+    const data = await queryBuilder
       .limit(limit)
       .offset(page * limit)
       .getRawMany<T>();
 
-    return [total, count] as [T[], number];
+    return [data, count] as [T[], number];
   }
 
   private resolvePages(page: number, lastPage: number) {
