@@ -1,11 +1,14 @@
+/* eslint-disable no-useless-catch */
 /* eslint-disable @typescript-eslint/no-useless-constructor */
 
-import type { FindManyOptions, Repository } from 'typeorm';
+import type { SelectQueryBuilder } from 'typeorm';
 
 import { PaginatorOptionsSchema } from '@/schemas/options-schema';
 import { zodValidate } from '@/validation/zod-validate';
+import { Repository } from 'typeorm';
 
 import type {
+  PaginatorAllowedInstances,
   PaginatorOptions,
   PaginatorResponse,
   PaginatorResponseInformation,
@@ -18,12 +21,63 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     super();
   }
 
+  private async countQueryBuilderRaw(
+    queryBuilder: SelectQueryBuilder<T>
+  ): Promise<number> {
+    const [query, queryParameters] = queryBuilder.getQueryAndParameters();
+
+    const innerQuery = `(${query})`;
+
+    const { total } = await queryBuilder
+      .createQueryBuilder()
+      .select('COUNT(*)', 'total')
+      .from(innerQuery, 'table_to_count')
+      .setParameters(queryParameters)
+      .getRawOne<{ total: number }>();
+
+    return Number(total);
+  }
+
+  private async fetchDataPaginated(
+    typeOrmInstance: PaginatorAllowedInstances<T>,
+    options: PaginatorOptions<T>
+  ) {
+    const normalizedOptions = this.normalizeOptions(options);
+
+    if (typeOrmInstance instanceof Repository) {
+      return this.fetchRepository(typeOrmInstance, normalizedOptions);
+    }
+
+    return this.fetchQueryBuilder(typeOrmInstance, normalizedOptions);
+  }
+
+  private async fetchQueryBuilder(
+    queryBuilder: SelectQueryBuilder<T>,
+    options: PaginatorOptions<T>
+  ) {
+    const { isRawPagination, limit, page } = options;
+
+    if (isRawPagination) {
+      return this.paginateQueryBuilderRaw(queryBuilder, limit, page);
+    }
+
+    return queryBuilder
+      .limit(limit)
+      .offset(page * limit)
+      .getManyAndCount();
+  }
+
   private async fetchRepository(
     repository: Repository<T>,
     options: PaginatorOptions<T>
   ) {
-    const findOptions = this.resolveFindOptions(options);
-    return repository.findAndCount(findOptions);
+    const { limit, page, query } = options;
+
+    return repository.findAndCount({
+      skip: page * limit,
+      take: limit,
+      ...query,
+    });
   }
 
   private getNextPage(page: number, limitPage: number): null | number {
@@ -57,16 +111,28 @@ export class Paginator<T> extends PaginatorAbstract<T> {
     };
   }
 
-  private resolveFindOptions(options: PaginatorOptions<T>): FindManyOptions<T> {
-    const { limit, page, query = {} } = options;
-
-    const skip = (page - 1) * limit;
+  private normalizeOptions(options: PaginatorOptions<T>): PaginatorOptions<T> {
+    const normalizedPage = options.page - 1;
 
     return {
-      skip,
-      take: limit,
-      ...query,
+      ...options,
+      page: normalizedPage,
     };
+  }
+
+  private async paginateQueryBuilderRaw(
+    queryBuilder: SelectQueryBuilder<T>,
+    limit: number,
+    page: number
+  ) {
+    const count = await this.countQueryBuilderRaw(queryBuilder);
+
+    const data = await queryBuilder
+      .limit(limit)
+      .offset(page * limit)
+      .getRawMany<T>();
+
+    return [data, count] as [T[], number];
   }
 
   private resolvePages(page: number, lastPage: number) {
@@ -106,13 +172,16 @@ export class Paginator<T> extends PaginatorAbstract<T> {
   }
 
   public async paginate(
-    repository: Repository<T>,
+    typeOrmInstance: PaginatorAllowedInstances<T>,
     options: PaginatorOptions<T>
   ): Promise<PaginatorResponse<T>> {
     try {
       zodValidate(PaginatorOptionsSchema, options);
 
-      const [data, total] = await this.fetchRepository(repository, options);
+      const [data, total] = await this.fetchDataPaginated(
+        typeOrmInstance,
+        options
+      );
 
       const responseInformation = this.resolveResponseInformation(
         total,
@@ -124,7 +193,6 @@ export class Paginator<T> extends PaginatorAbstract<T> {
         responseInformation,
       };
     } catch (err) {
-      console.error(err);
       throw err;
     }
   }

@@ -19,6 +19,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test-coverage": "jest --coverage && coveralls < coverage/lcov.info",
     "build": "tsup",
     "prepare": "husky",
     "export-vars": "export $(grep -v '^#' .env | xargs -0) && echo 'Environment variables are set'"
@@ -43,7 +44,9 @@
     "@types/node": "^20.3.1",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "better-sqlite3": "^9.6.0",
     "commitizen": "^4.3.0",
+    "coveralls": "^3.1.1",
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.42.0",
     "eslint-config-airbnb-base": "^15.0.0",
