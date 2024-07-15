@@ -19,7 +19,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test-coveralls": "jest --coverage && coveralls < coverage/lcov.info",
+    "test-coverage": "jest --coverage && coveralls < coverage/lcov.info",
     "build": "tsup",
     "prepare": "husky",
     "export-vars": "export $(grep -v '^#' .env | xargs -0) && echo 'Environment variables are set'"

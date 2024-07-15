@@ -28,7 +28,7 @@ jobs:
         run: npm run build
 
       - name: Test ${{ matrix.test_number }}
-        run: make test-coveralls-${{ matrix.test_number }}
+        run: make test-coverage-${{ matrix.test_number }}
 
       - name: Coveralls Parallel
         uses: coverallsapp/github-action@v2
