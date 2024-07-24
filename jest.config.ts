@@ -4,6 +4,7 @@ const config: Config.InitialOptions = {
   clearMocks: true,
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['<rootDir>/src/**/*.ts', '<rootDir>/src/*.ts'],
+  coveragePathIgnorePatterns: ['<rootDir>/src/types', '<rootDir>/src/main.ts'],
   preset: 'ts-jest',
   moduleNameMapper: {
     '@/(.*)': '<rootDir>/src/$1',

@@ -151,7 +151,7 @@ export class Paginator<T> extends PaginatorAbstract<T> {
   ) {
     const { limit, page } = options;
 
-    if (total === 0) {
+    if (!total) {
       return this.makeEmptyResponseInformation(limit);
     }
 
