@@ -137,17 +137,6 @@ module.exports = {
         ],
       },
     },
-    {
-      extends: ['plugin:markdown/recommended'],
-      files: ['*.md'],
-      processor: 'markdown/markdown',
-    },
-    {
-      files: ['**/*.md/*.js'],
-      rules: {
-        'import/no-unresolved': 'off',
-      },
-    },
   ],
   root: true,
 };
