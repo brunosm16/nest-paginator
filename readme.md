@@ -39,9 +39,9 @@ npm  install  my-crazy-module  --save
 
 ## Usage
 
-Read the docs to Learn More
+Read the docs to [Learn More](./docs/documentation.md)
 
-Repository with an example on how to use this application:  https://@github.com/brunosm16/nest-paginator-examples
+Repository with an example on how to use this application:  https://github.com/brunosm16/nest-paginator-examples
 
 
 

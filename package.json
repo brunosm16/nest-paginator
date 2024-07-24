@@ -28,8 +28,7 @@
     "paginator",
     "nestjs",
     "typeorm",
-    "reusable library",
-    "oss"
+    "reusable library"
   ],
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
