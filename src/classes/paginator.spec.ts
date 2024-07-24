@@ -222,6 +222,42 @@ describe('Paginator Tests', () => {
         })
       );
     });
+
+    it('Should return empty responseInformation', async () => {
+      const { sut } = makeSut();
+
+      const findAndCountSpy = jest
+        .spyOn(UserEntityRepository, 'findAndCount')
+        .mockImplementationOnce(async () => {
+          return [[], null];
+        });
+
+      const { responseData, responseInformation } = await sut.paginate(
+        UserEntityRepository,
+        { limit: 10, page: 1 }
+      );
+
+      expect(findAndCountSpy).toHaveBeenCalledWith({
+        skip: 0,
+        take: 10,
+      });
+
+      expect(responseData).toEqual(expect.any(Array<UserEntity>));
+      expect(responseData).toEqual([]);
+
+      expect(responseInformation).toEqual(
+        expect.objectContaining({
+          limitRows: 10,
+          pages: expect.objectContaining({
+            currentPage: null,
+            lastPage: null,
+            nextPage: null,
+            previousPage: null,
+          }),
+          totalRows: 0,
+        })
+      );
+    });
   });
 
   describe('.paginate with query builder', () => {
