@@ -1,6 +1,6 @@
 {
   "name": "nest-paginator",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Bruno Moraes <brunoskr23@gmail.com>",
   "license": "ISC",
   "description": "Paginating data with NestJS and TypeORM",
