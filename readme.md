@@ -31,7 +31,7 @@ Windows, Mac & Linux:
 
 ```sh
 
-npm  install  my-crazy-module  --save
+npm  install  nest-paginator  --save
 
 ```
 
@@ -51,7 +51,7 @@ Repository with an example on how to use this application:  https://github.com/b
 
 ```sh
 
-npm  test
+npm run test
 
 ```
 
